@@ -7,6 +7,7 @@ import {
   Image,
   Dimensions,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -114,39 +115,42 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <View className={`w-70 bg-gray-800 h-full flex-col ${isCollapsed ? 'w-16' : ''}`}>
+    <View style={[
+      styles.container,
+      isCollapsed && styles.containerCollapsed
+    ]}>
       {/* Header */}
-      <View className="p-4 border-b border-gray-700 flex-shrink-0">
-        <View className="flex-row items-center gap-3">
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
           <Image
             source={require('../../assets/images/icon.png')}
-            className="w-8 h-8 rounded-2xl flex-shrink-0"
+            style={styles.logo}
             resizeMode="contain"
           />
           {!isCollapsed && (
-            <View className="flex-1 min-w-0">
-              <Text className="text-base font-semibold text-white mb-0.5">LeadsTracker</Text>
-              <Text className="text-xs text-gray-400">(By Smartprocare)</Text>
+            <View style={styles.headerText}>
+              <Text style={styles.appName}>LeadsTracker</Text>
+              <Text style={styles.companyName}>(By Smartprocare)</Text>
             </View>
           )}
         </View>
       </View>
 
       {/* Navigation */}
-      <ScrollView className="flex-1 px-2" showsVerticalScrollIndicator={false}>
-        <View className="py-2 gap-1">
+      <ScrollView style={styles.navigation} showsVerticalScrollIndicator={false}>
+        <View style={styles.menuContainer}>
           {menuItems.map((item) => {
             const isActive = activeSection === item.id;
             const isLogout = (item as any).isLogout;
 
             return (
               <TouchableOpacity
-                key={item.id}
-                className={`flex-row items-center px-3 py-2.5 rounded-lg mb-0.5 ${
-                  isActive ? 'bg-gray-700' : ''
-                } ${isCollapsed ? 'justify-center px-2' : ''} ${
-                  isLogout ? 'bg-gray-800 border border-red-500 rounded-lg mb-0.5' : ''
-                }`}
+                style={[
+                  styles.menuItem,
+                  isActive && styles.menuItemActive,
+                  isCollapsed && styles.menuItemCollapsed,
+                  isLogout && styles.menuItemLogout
+                ]}
                 onPress={() => handleSectionChange(item.id)}
                 activeOpacity={0.7}
               >
@@ -154,12 +158,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                   name={item.icon as any}
                   size={20}
                   color={isLogout ? '#ef4444' : (isActive ? '#ffffff' : '#9ca3af')}
-                  className="mr-3 w-5"
+                  style={styles.menuIcon}
                 />
                 {!isCollapsed && (
-                  <Text className={`text-sm text-gray-400 flex-1 ${
-                    isActive ? 'text-white font-semibold' : ''
-                  } ${isLogout ? 'text-red-500 font-semibold' : ''}`}>
+                  <Text style={[
+                    styles.menuText,
+                    isActive && styles.menuTextActive,
+                    isLogout && styles.menuTextLogout
+                  ]}>
                     {item.label}
                   </Text>
                 )}
@@ -171,10 +177,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer - User Info (Mobile Only) */}
       {onClose && (
-        <View className="p-4 border-t border-gray-700 flex-shrink-0">
-          <View className="items-center">
-            <Text className="text-sm font-medium text-white mb-0.5">{userName}</Text>
-            <Text className="text-xs text-gray-400">{userRoleDisplay}</Text>
+        <View style={styles.footer}>
+          <View style={styles.footerContent}>
+            <Text style={styles.userName}>{userName}</Text>
+            <Text style={styles.userRole}>{userRoleDisplay}</Text>
           </View>
         </View>
       )}
@@ -183,3 +189,112 @@ const Sidebar: React.FC<SidebarProps> = ({
 };
 
 export default Sidebar;
+
+const styles = StyleSheet.create({
+  container: {
+    width: 280,
+    backgroundColor: '#1f2937',
+    height: '100%',
+    flexDirection: 'column',
+  },
+  containerCollapsed: {
+    width: 64,
+  },
+  header: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+    flexShrink: 0,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  logo: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    flexShrink: 0,
+  },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  appName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  companyName: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+  navigation: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  menuContainer: {
+    paddingVertical: 8,
+    gap: 4,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  menuItemActive: {
+    backgroundColor: '#374151',
+  },
+  menuItemCollapsed: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  menuItemLogout: {
+    backgroundColor: '#1f2937',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  menuIcon: {
+    marginRight: 12,
+    width: 20,
+  },
+  menuText: {
+    fontSize: 14,
+    color: '#9ca3af',
+    flex: 1,
+  },
+  menuTextActive: {
+    color: '#ffffff',
+    fontWeight: '600',
+  },
+  menuTextLogout: {
+    color: '#ef4444',
+    fontWeight: '600',
+  },
+  footer: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#374151',
+    flexShrink: 0,
+  },
+  footerContent: {
+    alignItems: 'center',
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#ffffff',
+    marginBottom: 2,
+  },
+  userRole: {
+    fontSize: 12,
+    color: '#9ca3af',
+  },
+});

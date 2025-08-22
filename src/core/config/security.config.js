@@ -3,7 +3,7 @@ export const securityConfig = {
   // Production environment
   production: {
     api: {
-      baseURL: (import.meta.env.VITE_API_BASE_URL || 'http://10.57.147.194:8082') + '/api',
+      baseURL: (import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.26:8082') + '/api',
       timeout: 30000,
       maxRetries: 3,
       enableHTTPS: true,
@@ -35,7 +35,7 @@ export const securityConfig = {
   // Development environment
   development: {
     api: {
-      baseURL: (import.meta.env.VITE_API_BASE_URL || 'http://10.57.147.194:8082') + '/api',
+      baseURL: (import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.26:8082') + '/api',
       timeout: 30000,
       maxRetries: 3,
       enableHTTPS: false,

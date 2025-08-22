@@ -5,92 +5,67 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Animated,
+  Alert,
+  Dimensions,
+  Image,
 } from 'react-native';
 import { router } from 'expo-router';
-import { useAuth } from '../../src/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../src/contexts/AuthContext';
+
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false);
+  const [slideIn, setSlideIn] = useState(false);
   const [error, setError] = useState('');
-  const { sendOtp } = useAuth();
-  
-  // Animation values
-  const fadeAnim = new Animated.Value(0);
-  const slideAnim = new Animated.Value(50);
+  const [success, setSuccess] = useState('');
 
-  // Entry animation
+  const { sendOtp } = useAuth();
+
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Start animations
+    const timer1 = setTimeout(() => setFadeIn(true), 100);
+    const timer2 = setTimeout(() => setSlideIn(true), 300);
+    
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, []);
 
-  // Error auto-hide
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(''), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
-  const handleForgotPassword = async () => {
-    if (!email) {
+  const handleSendOtp = async () => {
+    if (!email.trim()) {
       setError('Please enter your email address');
       return;
     }
 
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address');
-      return;
-    }
-
-    setError('');
     setIsLoading(true);
+    setError('');
+    setSuccess('');
 
     try {
-      const result = await sendOtp(email);
-
+      const result = await sendOtp(email.trim());
+      
       if (result.success) {
-        Alert.alert(
-          'Success',
-          result.message || 'OTP sent to your email',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back()
-            }
-          ]
-        );
+        setSuccess('OTP sent successfully! Please check your email.');
+        // Navigate to OTP verification screen
+        setTimeout(() => {
+          router.push('/auth/verify-otp');
+        }, 2000);
       } else {
         setError(result.error || 'Failed to send OTP');
       }
     } catch (error) {
-      console.error('Send OTP error:', error);
-      setError('An unexpected error occurred. Please try again.');
+      setError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGoBack = () => {
-    router.back();
   };
 
   return (
@@ -98,45 +73,95 @@ export default function ForgotPasswordScreen() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-            <Text style={styles.backButtonText}>← Back</Text>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={[styles.header, { opacity: fadeIn ? 1 : 0 }]}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#1c69ff" />
           </TouchableOpacity>
+          
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../../assets/images/icon.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.subtitle}>Enter your email to receive an OTP</Text>
+          </View>
         </View>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.title}>Forgot Password</Text>
-          <Text style={styles.subtitle}>
-            Enter your email address and we'll send you a link to reset your password.
-          </Text>
-
+        {/* Form */}
+        <View style={[styles.formContainer, { 
+          opacity: slideIn ? 1 : 0,
+          transform: [{ translateY: slideIn ? 0 : 50 }]
+        }]}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
+            <Ionicons name="mail-outline" size={20} color="#6b7280" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder="Enter your email"
+              placeholder="Email address"
+              placeholderTextColor="#9ca3af"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              returnKeyType="done"
+              onSubmitEditing={handleSendOtp}
             />
           </View>
 
+          {/* Error Message */}
+          {error ? (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={16} color="#ef4444" />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {/* Success Message */}
+          {success ? (
+            <View style={styles.successContainer}>
+              <Ionicons name="checkmark-circle-outline" size={16} color="#10b981" />
+              <Text style={styles.successText}>{success}</Text>
+            </View>
+          ) : null}
+
+          {/* Send OTP Button */}
           <TouchableOpacity
-            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-            onPress={handleForgotPassword}
+            style={styles.sendOtpButton}
+            onPress={handleSendOtp}
             disabled={isLoading}
+            activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Sending OTP...</Text>
+              </View>
             ) : (
-              <Text style={styles.submitButtonText}>Send Reset Link</Text>
+              <Text style={styles.sendOtpButtonText}>Send OTP</Text>
             )}
           </TouchableOpacity>
         </View>
-      </View>
+
+        {/* Footer */}
+        <View style={[styles.footer, { opacity: fadeIn ? 1 : 0 }]}>
+          <Text style={styles.footerText}>
+            Remember your password?{' '}
+            <Text style={styles.footerLink} onPress={() => router.back()}>
+              Sign in
+            </Text>
+          </Text>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -146,72 +171,126 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  content: {
-    flex: 1,
+  scrollContainer: {
+    flexGrow: 1,
     padding: 20,
   },
   header: {
-    paddingTop: Platform.OS === 'ios' ? 40 : 20,
     marginBottom: 40,
   },
   backButton: {
-    alignSelf: 'flex-start',
+    marginBottom: 20,
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#007AFF',
-    fontWeight: '600',
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 20,
   },
-  formContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  logo: {
+    width: screenWidth * 0.2,
+    height: screenWidth * 0.2,
+    marginBottom: 10,
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#1a1a1a',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
     lineHeight: 24,
   },
+  formContainer: {
+    marginTop: 20,
+  },
   inputContainer: {
-    marginBottom: 30,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: 8,
-  },
-  input: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#e0e0e0',
     borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
     fontSize: 16,
     color: '#1a1a1a',
   },
-  submitButton: {
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: '#d97706',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  successContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    borderWidth: 1,
+    borderColor: '#34d399',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 20,
+  },
+  successText: {
+    color: '#065f46',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  sendOtpButton: {
     backgroundColor: '#007AFF',
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 56,
   },
-  submitButtonDisabled: {
-    backgroundColor: '#B0B0B0',
-  },
-  submitButtonText: {
+  sendOtpButtonText: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  footer: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  footerLink: {
+    color: '#007AFF',
     fontWeight: '600',
   },
 });

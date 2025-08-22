@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configure base URL
-const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://10.57.147.194:8082';
+const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.1.26:8082';
 axios.defaults.baseURL = BASE_URL;
 import { API_ENDPOINTS, buildUrl } from './api.endpoints';
 

@@ -9,16 +9,11 @@ import {
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
-import { useAuth } from '../../src/contexts/AuthContext';
-import { AuthService } from '../../src/core/services/auth.service';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function SimpleLoginScreen() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { login } = useAuth();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -26,36 +21,19 @@ export default function SimpleLoginScreen() {
 
   const handleLogin = async () => {
     if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
+      Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    setError('');
     setIsLoading(true);
-
-    try {
-      const result = await AuthService.login(formData) as any;
-
-      if (result.success) {
-        await login(result.user, result.token);
-        router.replace('/(tabs)');
-      } else {
-        setError(result.error || 'Login failed');
-      }
-    } catch (error: any) {
-      console.error('Login error:', error);
-      
-      // Better error messages based on error type
-      if (error?.code === 'NETWORK_ERROR' || error?.message?.includes('Network Error')) {
-        setError('Cannot connect to server. Please ensure your backend is running on 10.57.147.194 :8082');
-      } else if (error?.code === 'ECONNREFUSED') {
-        setError('Server not responding. Please start your backend server.');
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-      }
-    } finally {
+    
+    // Simulate login process
+    setTimeout(() => {
       setIsLoading(false);
-    }
+      Alert.alert('Success', 'Login successful! Welcome to Leads Tracker.');
+      // Navigate to main app after successful login
+      router.replace('/(tabs)');
+    }, 1500);
   };
 
   return (
@@ -68,20 +46,14 @@ export default function SimpleLoginScreen() {
       <View style={styles.formContainer}>
         <Text style={styles.welcomeTitle}>Welcome Back!</Text>
 
-        {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        ) : null}
-
         {/* Email Input */}
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Your Email</Text>
           <View style={styles.inputWrapper}>
-            <Ionicons name="mail-outline" size={18} color="#000" style={styles.inputIcon} />
+            <Text style={styles.inputIcon}>📧</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="Username"
+              placeholder="Enter your email"
               value={formData.email}
               onChangeText={(value) => handleInputChange('email', value)}
               keyboardType="email-address"
@@ -96,10 +68,10 @@ export default function SimpleLoginScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.inputLabel}>Password</Text>
           <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={18} color="#000" style={styles.inputIcon} />
+            <Text style={styles.inputIcon}>🔒</Text>
             <TextInput
               style={[styles.textInput, { flex: 1 }]}
-              placeholder="Password"
+              placeholder="Enter your password"
               value={formData.password}
               onChangeText={(value) => handleInputChange('password', value)}
               secureTextEntry={!showPassword}
@@ -111,11 +83,9 @@ export default function SimpleLoginScreen() {
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeButton}
             >
-              <Ionicons 
-                name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                size={18} 
-                color="#000" 
-              />
+              <Text style={styles.eyeIcon}>
+                {showPassword ? '👁️' : '🙈'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -123,7 +93,7 @@ export default function SimpleLoginScreen() {
         {/* Forgot Password */}
         <TouchableOpacity
           style={styles.forgotPasswordButton}
-          onPress={() => router.push('/auth/forgot-password')}
+          onPress={() => Alert.alert('Info', 'Forgot password functionality will be added here')}
         >
           <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
         </TouchableOpacity>
@@ -149,7 +119,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
-    paddingBottom: 0, // Ensure no extra padding that might cause menu to show
+    paddingBottom: 0,
   },
   header: {
     alignItems: 'center',
@@ -188,21 +158,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 32,
   },
-  errorContainer: {
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 20,
-    marginTop: 10,
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
   inputGroup: {
     marginBottom: 24,
   },
@@ -224,6 +179,7 @@ const styles = StyleSheet.create({
   },
   inputIcon: {
     marginRight: 8,
+    fontSize: 18,
   },
   textInput: {
     flex: 1,
@@ -234,6 +190,9 @@ const styles = StyleSheet.create({
   eyeButton: {
     padding: 4,
     marginLeft: 8,
+  },
+  eyeIcon: {
+    fontSize: 18,
   },
   forgotPasswordButton: {
     alignSelf: 'flex-end',

@@ -6,6 +6,7 @@ import {
   Dimensions,
   Modal,
   Pressable,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -57,11 +58,14 @@ const ThreeDotMenu: React.FC<ThreeDotMenuProps> = ({ item, actions = [], style }
   };
 
   return (
-    <View className="relative" style={style}>
+    <View style={[styles.container, style]}>
       <TouchableOpacity
         ref={buttonRef}
         onPress={handleToggle}
-        className={`p-1.5 rounded-lg bg-transparent ${open ? 'bg-gray-100' : ''}`}
+        style={[
+          styles.button,
+          open && styles.buttonActive
+        ]}
         activeOpacity={0.7}
       >
         <Ionicons 
@@ -77,24 +81,25 @@ const ThreeDotMenu: React.FC<ThreeDotMenuProps> = ({ item, actions = [], style }
         animationType="fade"
         onRequestClose={closeMenu}
       >
-        <Pressable className="flex-1 bg-black/50" onPress={closeMenu}>
+        <Pressable style={styles.backdrop} onPress={closeMenu}>
           <View 
-            className="absolute bg-white rounded-xl shadow-lg min-w-[180px] border border-gray-200"
-            style={{
-              left: menuPosition.x,
-              top: menuPosition.y,
-            }}
+            style={[
+              styles.menu,
+              {
+                left: menuPosition.x,
+                top: menuPosition.y,
+              }
+            ]}
           >
             {actions.map((action, index) => (
               <TouchableOpacity
                 key={index}
-                className={`flex-row items-center px-4 py-3 border-b border-gray-100 ${
-                  index === 0 ? 'rounded-t-xl' : ''
-                } ${
-                  index === actions.length - 1 ? 'border-b-0 rounded-b-xl' : ''
-                } ${
-                  action.danger ? 'bg-red-50' : ''
-                }`}
+                style={[
+                  styles.menuItem,
+                  index === 0 && styles.firstMenuItem,
+                  index === actions.length - 1 && styles.lastMenuItem,
+                  action.danger && styles.dangerMenuItem
+                ]}
                 onPress={() => handleAction(action.onClick)}
                 activeOpacity={0.7}
               >
@@ -103,12 +108,13 @@ const ThreeDotMenu: React.FC<ThreeDotMenuProps> = ({ item, actions = [], style }
                     name={action.icon as any}
                     size={16}
                     color={action.danger ? '#ef4444' : '#6b7280'}
-                    className="mr-3 w-4"
+                    style={styles.actionIcon}
                   />
                 )}
-                <Text className={`text-sm font-medium text-gray-700 flex-1 ${
-                  action.danger ? 'text-red-600' : ''
-                }`}>
+                <Text style={[
+                  styles.menuText,
+                  action.danger && styles.dangerMenuText
+                ]}>
                   {action.label}
                 </Text>
               </TouchableOpacity>
@@ -121,3 +127,67 @@ const ThreeDotMenu: React.FC<ThreeDotMenuProps> = ({ item, actions = [], style }
 };
 
 export default ThreeDotMenu;
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'relative',
+  },
+  button: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: 'transparent',
+  },
+  buttonActive: {
+    backgroundColor: '#f3f4f6',
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  menu: {
+    position: 'absolute',
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+    minWidth: 180,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  firstMenuItem: {
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  lastMenuItem: {
+    borderBottomWidth: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  dangerMenuItem: {
+    backgroundColor: '#fef2f2',
+  },
+  actionIcon: {
+    marginRight: 12,
+    width: 16,
+  },
+  menuText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    flex: 1,
+  },
+  dangerMenuText: {
+    color: '#dc2626',
+  },
+});

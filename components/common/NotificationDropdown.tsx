@@ -3,6 +3,7 @@ import {
   View,
   TouchableOpacity,
   Text,
+  StyleSheet,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -24,9 +25,9 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
   };
 
   return (
-    <View className="relative">
+    <View style={styles.container}>
       <TouchableOpacity
-        className="p-2 rounded-full bg-transparent relative"
+        style={styles.button}
         onPress={handlePress}
         disabled={loading}
         activeOpacity={0.7}
@@ -38,8 +39,8 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
         />
         
         {unreadCount > 0 && (
-          <View className="absolute -top-1 -right-1 bg-red-500 rounded-full min-w-[20px] h-5 justify-center items-center px-1">
-            <Text className="text-white text-xs font-bold text-center">
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
               {unreadCount > 99 ? '99+' : unreadCount}
             </Text>
           </View>
@@ -50,3 +51,33 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
 };
 
 export default NotificationDropdown;
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'relative',
+  },
+  button: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#ef4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+});

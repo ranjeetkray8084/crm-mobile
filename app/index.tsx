@@ -1,56 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text, Image } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { useAuth } from '../src/contexts/AuthContext';
 
 export default function IndexScreen() {
-  const { isAuthenticated, loading } = useAuth();
-  const [fadeIn, setFadeIn] = useState(false);
+  const goToLogin = () => {
+    router.push('/auth/login-simple');
+  };
 
-  useEffect(() => {
-    // Start fade-in effect
-    const timer = setTimeout(() => {
-      setFadeIn(true);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      // Add a small delay for better UX
-      const timer = setTimeout(() => {
-        console.log('Index screen - Authentication check:', { isAuthenticated, loading });
-        if (isAuthenticated) {
-          // User is authenticated, redirect to main app
-          console.log('User is authenticated, redirecting to tabs');
-          router.replace('/(tabs)');
-        } else {
-          // User is not authenticated, redirect to simple login for testing
-          console.log('User is not authenticated, redirecting to login');
-          router.replace('/auth/login-simple');
-        }
-      }, 800);
-
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated, loading]);
-
-  // Show beautiful loading screen while checking authentication
   return (
-    <View style={[styles.container, { opacity: fadeIn ? 1 : 0 }]}>
-      <View style={styles.content}>
-        <Image 
-          source={require('../assets/images/icon.png')} 
-          style={styles.logo}
-          resizeMode="contain"
-        />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.logo}>📊</Text>
         <Text style={styles.title}>LEADS TRACKER</Text>
         <Text style={styles.subtitle}>Track Leads, Close Faster</Text>
-        
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1c69ff" />
-          <Text style={styles.loadingText}>Loading...</Text>
-        </View>
+      </View>
+
+      <View style={styles.content}>
+        <Text style={styles.welcomeText}>Welcome to Leads Tracker</Text>
+        <Text style={styles.descriptionText}>
+          Your complete solution for managing leads and closing deals faster
+        </Text>
+
+        <TouchableOpacity style={styles.loginButton} onPress={goToLogin}>
+          <Text style={styles.loginButtonText}>Get Started</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -61,39 +34,64 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
+  header: {
+    alignItems: 'center',
+    paddingTop: 80,
+    paddingBottom: 40,
+  },
+  logo: {
+    fontSize: 60,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1c69ff',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 30,
   },
-  logo: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#1c69ff',
-    letterSpacing: 2,
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 16,
     textAlign: 'center',
-    marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 14,
-    color: '#1c69ff',
-    letterSpacing: 1.2,
-    textAlign: 'center',
-    marginBottom: 60,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-  },
-  loadingText: {
+  descriptionText: {
     fontSize: 16,
-    color: '#6b7280',
-    marginTop: 16,
-    fontWeight: '500',
+    color: '#666666',
+    marginBottom: 40,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  loginButton: {
+    backgroundColor: '#1c69ff',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  loginButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
   },
 });

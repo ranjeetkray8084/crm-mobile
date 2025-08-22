@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  StyleSheet,
 } from 'react-native';
 
 interface BottomNavigationProps {
@@ -25,29 +26,39 @@ interface TabItemProps {
 
 const TabItem: React.FC<TabItemProps> = ({ icon, label, color, isActive, onPress, isCenter, isToolbarOpen }) => (
   <TouchableOpacity 
-    className={`items-center justify-center flex-1 py-2 relative ${isCenter ? 'flex-none -mt-5' : ''}`}
+    style={[
+      styles.tabItem,
+      isCenter && styles.centerTab
+    ]}
     onPress={onPress} 
     activeOpacity={0.7}
   >
-    <View className={`justify-center items-center mb-1 shadow-sm ${
-      isCenter ? 'w-14 h-14 rounded-full shadow-md' : 'w-11 h-11 rounded-full'
-    }`}
-    style={{ 
-      backgroundColor: isActive ? color : (isCenter ? '#007AFF' : '#f5f5f5'),
-      transform: isCenter && isToolbarOpen ? [{ scale: 1.1 }] : [{ scale: 1 }]
-    }}>
-      <Text className={`${isCenter ? 'text-2xl' : 'text-lg'}`}>
+    <View style={[
+      styles.iconContainer,
+      isCenter ? styles.centerIconContainer : styles.regularIconContainer,
+      { 
+        backgroundColor: isActive ? color : (isCenter ? '#007AFF' : '#f5f5f5'),
+        transform: isCenter && isToolbarOpen ? [{ scale: 1.1 }] : [{ scale: 1 }]
+      }
+    ]}>
+      <Text style={[
+        styles.iconText,
+        isCenter ? styles.centerIconText : styles.regularIconText
+      ]}>
         {icon}
       </Text>
     </View>
     {!isCenter && (
-      <Text className={`text-xs text-center mt-0.5 ${isActive ? 'font-semibold' : 'font-normal'}`}
-            style={{ color: isActive ? color : '#666' }}>
+      <Text style={[
+        styles.tabLabel,
+        { color: isActive ? color : '#666' },
+        isActive ? styles.activeTabLabel : styles.inactiveTabLabel
+      ]}>
         {label}
       </Text>
     )}
     {isActive && !isCenter && (
-      <View className="absolute -bottom-1 w-1 h-1 rounded-full" style={{ backgroundColor: color }} />
+      <View style={[styles.activeIndicator, { backgroundColor: color }]} />
     )}
   </TouchableOpacity>
 );
@@ -148,38 +159,39 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
   ];
 
   return (
-    <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-5 pt-2">
+    <View style={styles.container}>
       {/* Backdrop for toolbar */}
       {showToolbar && (
         <TouchableWithoutFeedback onPress={closeToolbar}>
-          <View className="absolute top-0 left-0 right-0 bottom-0 bg-black/30 z-50" />
+          <View style={styles.backdrop} />
         </TouchableWithoutFeedback>
       )}
 
       {/* Toolbar that appears above bottom navigation */}
       {showToolbar && addOptions.length > 0 && (
-        <View className="absolute bottom-full left-0 right-0 bg-transparent px-5 pb-4 z-50">
-          <View className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden min-w-[200px] self-center">
+        <View style={styles.toolbarContainer}>
+          <View style={styles.toolbar}>
             {addOptions.map((option, index) => (
               <TouchableOpacity
-                key={option.id}
-                className={`px-6 py-4.5 border-b border-gray-100 bg-white ${index === addOptions.length - 1 ? 'border-b-0' : ''}`}
+                style={[
+                  styles.toolbarItem,
+                  index === addOptions.length - 1 && styles.lastToolbarItem
+                ]}
                 onPress={() => handleAddAction(option.id)}
                 activeOpacity={0.7}
               >
-                <Text className="text-base font-medium text-gray-700 text-center">{option.label}</Text>
+                <Text style={styles.toolbarText}>{option.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
           {/* Arrow indicator pointing to plus button */}
-          <View className="absolute bottom-0 left-1/2 w-0 h-0 border-l-[10px] border-r-[10px] border-b-[10px] border-l-transparent border-r-transparent border-b-white transform -translate-y-2.5 shadow-sm" />
+          <View style={styles.toolbarArrow} />
         </View>
       )}
 
-      <View className="flex-row justify-around items-center px-5">
+      <View style={styles.tabsContainer}>
         {tabs.map((tab) => (
           <TabItem
-            key={tab.key}
             icon={tab.icon}
             label={tab.label}
             color={tab.color}
@@ -195,3 +207,152 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
 };
 
 export default BottomNavigation;
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingBottom: 20,
+    paddingTop: 8,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 50,
+  },
+  toolbarContainer: {
+    position: 'absolute',
+    bottom: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    zIndex: 50,
+  },
+  toolbar: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+    minWidth: 200,
+    alignSelf: 'center',
+  },
+  toolbarItem: {
+    paddingHorizontal: 24,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    backgroundColor: '#ffffff',
+  },
+  lastToolbarItem: {
+    borderBottomWidth: 0,
+  },
+  toolbarText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  toolbarArrow: {
+    position: 'absolute',
+    bottom: 0,
+    left: '50%',
+    width: 0,
+    height: 0,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderBottomWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: '#ffffff',
+    transform: [{ translateY: 10 }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    position: 'relative',
+  },
+  centerTab: {
+    flex: undefined,
+    marginTop: -5,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  regularIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  centerIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  iconText: {
+    fontSize: 20,
+  },
+  centerIconText: {
+    fontSize: 24,
+  },
+  regularIconText: {
+    fontSize: 18,
+  },
+  tabLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  activeTabLabel: {
+    fontWeight: '600',
+  },
+  inactiveTabLabel: {
+    fontWeight: '400',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+});

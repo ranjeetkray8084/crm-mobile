@@ -1,50 +1,174 @@
-# Welcome to your Expo app 👋
+# CRM Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A powerful mobile CRM application built with React Native and Expo, converted from the web-based CRM frontend.
 
-## Get started
+## Features
 
-1. Install dependencies
+### 🔐 Authentication
+- Secure login with email and password
+- Forgot password functionality
+- AsyncStorage for persistent user sessions
+- JWT token management
 
+### 📊 Dashboard
+- Overview of key metrics (leads, properties, tasks, notifications)
+- Quick action buttons for common tasks
+- Recent activity feed
+- User role and company information display
+
+### 👥 Leads Management
+- View all leads with search and filtering
+- Lead status tracking (new, contacted, qualified, lost)
+- Contact information management
+- Source tracking
+
+### 🏢 Properties Management
+- Property listings with detailed information
+- Type filtering (residential, commercial, land)
+- Status tracking (available, sold, pending)
+- Property details including bedrooms, bathrooms, area
+
+### ✅ Task Management
+- Task creation and assignment
+- Priority levels (low, medium, high)
+- Status tracking (pending, in progress, completed)
+- Due date management
+
+### 👤 Profile & Settings
+- User profile information
+- Company details
+- Statistics overview
+- Settings and logout functionality
+
+## Technical Architecture
+
+### Core Technologies
+- **React Native** with Expo
+- **Expo Router** for navigation
+- **TypeScript** for type safety
+- **AsyncStorage** for local data persistence
+- **Axios** for API communications
+
+### Key Components
+- **AuthContext**: User authentication and session management
+- **NotesContext**: Notes and activities management
+- **AuthService**: Authentication API calls and token management
+- **API Endpoints**: Centralized API endpoint definitions
+
+### Project Structure
+```
+src/
+├── contexts/           # React contexts for state management
+│   ├── AuthContext.js  # Authentication context
+│   └── NotesContext.js # Notes context
+├── services/           # API services
+│   ├── auth.service.js # Authentication service
+│   └── api.endpoints.js # API endpoint definitions
+app/
+├── auth/              # Authentication screens
+│   ├── login.tsx      # Login screen
+│   └── forgot-password.tsx # Forgot password screen
+└── (tabs)/            # Main app tabs
+    ├── index.tsx      # Dashboard
+    ├── leads.tsx      # Leads management
+    ├── properties.tsx # Properties management
+    ├── tasks.tsx      # Task management
+    └── profile.tsx    # User profile
+```
+
+## Setup Instructions
+
+### Prerequisites
+- Node.js (v16 or higher)
+- npm or yarn
+- Expo CLI
+
+### Installation
+1. Navigate to the project directory:
+   ```bash
+   cd Leadstracker
+   ```
+
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the app
+3. Configure API endpoints:
+   - Update `BASE_URL` in `src/services/api.endpoints.js`
+   - Replace with your actual API base URL
 
+4. Start the development server:
    ```bash
-   npx expo start
+   npm start
    ```
 
-In the output, you'll find options to open the app in a
+5. Run on device/simulator:
+   ```bash
+   npm run ios     # For iOS
+   npm run android # For Android
+   ```
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Configuration
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+### API Configuration
+Update the API base URL in `src/services/api.endpoints.js`:
+```javascript
+export const BASE_URL = 'https://your-api-base-url.com';
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Authentication
+The app uses JWT tokens for authentication. Make sure your backend API supports:
+- POST `/api/auth/login` - User login
+- POST `/api/auth/logout` - User logout
+- POST `/api/auth/refresh` - Token refresh
+- POST `/api/auth/forgot-password` - Password reset
 
-## Learn more
+## Features Roadmap
 
-To learn more about developing your project with Expo, look at the following resources:
+### Upcoming Features
+- [ ] Real-time notifications
+- [ ] Offline data synchronization
+- [ ] Advanced filtering and search
+- [ ] File attachments for leads/properties
+- [ ] Calendar integration
+- [ ] Reports and analytics
+- [ ] Multi-language support
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### API Integration
+- [ ] Connect to actual CRM backend APIs
+- [ ] Implement real-time data updates
+- [ ] Add image upload functionality
+- [ ] Implement push notifications
 
-## Join the community
+## Development Notes
 
-Join our community of developers creating universal apps.
+### Mock Data
+Currently, the app uses mock data for demonstration purposes. To connect to a real backend:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+1. Update API endpoints in `src/services/api.endpoints.js`
+2. Implement actual API calls in service files
+3. Remove mock data from component files
+4. Add proper error handling for API responses
+
+### Security Considerations
+- All API calls use authentication tokens
+- Sensitive data is encrypted in AsyncStorage
+- Input validation is implemented on all forms
+- Secure token refresh mechanism
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
+
+## Support
+
+For support and questions, contact: support@crmapp.com

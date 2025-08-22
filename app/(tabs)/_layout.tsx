@@ -1,45 +1,66 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
+import React, { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import BottomNavigation from '@/components/BottomNavigation';
+import { useAuth } from '@/src/contexts/AuthContext';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const [activeTab, setActiveTab] = useState('Dashboard');
+  const { userRole } = useAuth();
+
+  const handleTabPress = (tab: string) => {
+    setActiveTab(tab);
+    // You can add navigation logic here if needed
+    console.log('Tab pressed:', tab);
+  };
+
+  const handleAddAction = (action: string) => {
+    // Handle add actions here
+    console.log('Add action:', action);
+    // You can add navigation logic or other actions based on the action type
+    switch (action) {
+      case 'User':
+        // Navigate to add user screen
+        break;
+      case 'Lead':
+        // Navigate to add lead screen
+        break;
+      case 'Properties':
+        // Navigate to add property screen
+        break;
+      case 'Notes':
+        // Navigate to add notes/event screen
+        break;
+      case 'Task':
+        // Navigate to add calling data screen
+        break;
+      default:
+        break;
+    }
+  };
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+    <>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { display: 'none' }, // Hide the default tab bar
         }}
+      >
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="leads" />
+        <Tabs.Screen name="properties" />
+        <Tabs.Screen name="tasks" />
+        <Tabs.Screen name="profile" />
+      </Tabs>
+      
+      <BottomNavigation 
+        activeTab={activeTab}
+        onTabPress={handleTabPress}
+        onAddAction={handleAddAction}
+        userRole={userRole}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+    </>
   );
 }

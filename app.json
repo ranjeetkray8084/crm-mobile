@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Leadstracker",
-    "slug": "Leadstracker",
+    "name": "CRM Mobile",
+    "slug": "crm-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "leadstracker",
+    "scheme": "crm-mobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

@@ -18,15 +18,35 @@ export const useAuth = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        console.log('useAuth: Initializing authentication...');
+        
+        // Check for stored credentials
         const currentUser = await AuthService.getCurrentUser();
         const token = await AuthService.getToken();
 
+        console.log('useAuth: Stored user:', currentUser ? 'Yes' : 'No');
+        console.log('useAuth: Stored token:', token ? 'Yes' : 'No');
+
         if (currentUser && token) {
+          // Set axios header for future requests
+          AuthService.setAxiosHeader(token);
+          
+          // Since backend doesn't have session check, we'll just use stored credentials
+          console.log('useAuth: Using stored credentials (no backend session check)');
           setUser(currentUser);
           setIsAuthenticated(true);
+          
+          // No need for session refresh since backend doesn't have session check
+          console.log('useAuth: Session refresh not needed (no backend session check)');
+        } else {
+          console.log('useAuth: No stored credentials found');
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (error) {
-        console.warn('Failed to initialize auth:', error);
+        console.error('useAuth: Failed to initialize auth:', error);
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
         setLoading(false);
       }
@@ -56,13 +76,32 @@ export const useAuth = () => {
 
       if (result && result.success) {
         console.log('useAuth: Login successful, saving session...');
-        await AuthService.saveSession(result.user, result.token);
-        setUser(result.user);
-        setIsAuthenticated(true);
-        return { success: true, user: result.user };
+        
+        // Extract user and token from the result
+        const userData = result.user || result.data;
+        const token = result.token || result.data?.accessToken;
+        
+        if (userData && token) {
+          await AuthService.saveSession(userData, token);
+          setUser(userData);
+          setIsAuthenticated(true);
+          
+          // No need for session refresh since backend doesn't have session check
+          console.log('useAuth: Session refresh not needed (no backend session check)');
+          
+          console.log('useAuth: User authenticated successfully:', userData);
+          return { success: true, user: userData, message: result.message || 'Login successful' };
+        } else {
+          console.error('useAuth: Missing user data or token in response');
+          return { success: false, error: 'Invalid response from server' };
+        }
       } else {
         console.log('useAuth: Login failed:', result?.error || 'Unknown error');
-        return { success: false, error: result?.error || 'Login failed' };
+        return { 
+          success: false, 
+          error: result?.error || 'Login failed',
+          statusCode: result?.statusCode
+        };
       }
     } catch (error) {
       console.error('useAuth: Login error caught:', error);
@@ -74,11 +113,17 @@ export const useAuth = () => {
 
   const logout = async () => {
     try {
+      console.log('useAuth: Logging out...');
+      
+      // No need to stop session refresh since we don't start it
+      console.log('useAuth: Session refresh stop not needed (no refresh intervals)');
+      
       await AuthService.logout();
     } catch (error) {
       console.warn('Logout error:', error);
     } finally {
       // Always clear local state regardless of API call result
+      console.log('useAuth: Clearing local auth state');
       setUser(null);
       setIsAuthenticated(false);
     }

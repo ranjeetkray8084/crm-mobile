@@ -41,6 +41,8 @@ export class AuthService {
       const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
       console.log('AuthService: Response status:', response.status);
       console.log('AuthService: Response data:', response.data);
+      console.log('AuthService: Response data type:', typeof response.data);
+      console.log('AuthService: Response data keys:', Object.keys(response.data));
 
       // Extract token and user data
       const token = response.data.accessToken || response.data.token;
@@ -56,6 +58,9 @@ export class AuthService {
 
       console.log('AuthService: Extracted user data:', user);
       console.log('AuthService: Token received:', token ? 'Yes' : 'No');
+      console.log('AuthService: User ID extracted:', user.userId);
+      console.log('AuthService: Email extracted:', user.email);
+      console.log('AuthService: Role extracted:', user.role);
 
       if (!token) {
         console.error('AuthService: No token received');
@@ -274,19 +279,14 @@ export class AuthService {
    * @returns {Promise<Object>} Result
    */
   static async checkSession() {
-    try {
-      const response = await axios.get(API_ENDPOINTS.USERS.CHECK_SESSION);
-      return {
-        success: true,
-        data: response.data,
-        message: 'Session active'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Session expired'
-      };
-    }
+    // Backend doesn't have session check API, so we'll just return success
+    // The token validation will happen naturally when making API calls
+    console.log('AuthService.checkSession: Backend has no session check API, returning success');
+    return {
+      success: true,
+      data: { message: 'No session check available' },
+      message: 'Session check not implemented'
+    };
   }
 
   /**
@@ -315,8 +315,12 @@ export class AuthService {
   static async getCurrentUser() {
     try {
       const user = await AsyncStorage.getItem(this.SESSION_KEYS.USER);
-      return user ? JSON.parse(user) : null;
-    } catch {
+      console.log('AuthService.getCurrentUser: Raw user data from storage:', user);
+      const parsedUser = user ? JSON.parse(user) : null;
+      console.log('AuthService.getCurrentUser: Parsed user data:', parsedUser);
+      return parsedUser;
+    } catch (error) {
+      console.error('AuthService.getCurrentUser: Error getting user:', error);
       return null;
     }
   }
@@ -327,8 +331,11 @@ export class AuthService {
    */
   static async getToken() {
     try {
-      return await AsyncStorage.getItem(this.SESSION_KEYS.TOKEN);
-    } catch {
+      const token = await AsyncStorage.getItem(this.SESSION_KEYS.TOKEN);
+      console.log('AuthService.getToken: Token from storage:', token ? 'Present' : 'Missing');
+      return token;
+    } catch (error) {
+      console.error('AuthService.getToken: Error getting token:', error);
       return null;
     }
   }
@@ -354,20 +361,128 @@ export class AuthService {
    */
   static async saveSession(userData, token) {
     try {
+      console.log('AuthService.saveSession: Starting...');
+      console.log('AuthService.saveSession: userData:', userData);
+      console.log('AuthService.saveSession: token:', token ? 'Present' : 'Missing');
+      
       if (!userData) {
+        console.error('AuthService.saveSession: No user data provided');
         return;
       }
 
       if (!token) {
+        console.error('AuthService.saveSession: No token provided');
         return;
       }
 
       await AsyncStorage.setItem(this.SESSION_KEYS.USER, JSON.stringify(userData));
       await AsyncStorage.setItem(this.SESSION_KEYS.TOKEN, token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      this.setAxiosHeader(token);
+      
+      console.log('AuthService.saveSession: Session saved successfully');
+      console.log('AuthService.saveSession: User stored:', await this.getCurrentUser());
+      console.log('AuthService.saveSession: Token stored:', await this.getToken());
 
     } catch (error) {
-      console.warn('Failed to save session:', error);
+      console.error('AuthService.saveSession: Failed to save session:', error);
     }
+  }
+
+  /**
+   * Set axios authorization header
+   * @param {string} token - JWT token
+   */
+  static setAxiosHeader(token) {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }
+
+  /**
+   * Refresh session and validate token
+   * @returns {Promise<Object>} Result
+   */
+  static async refreshSession() {
+    try {
+      const token = await this.getToken();
+      const user = await this.getCurrentUser();
+
+      if (!token || !user) {
+        return {
+          success: false,
+          error: 'No stored session found'
+        };
+      }
+
+      // Since backend doesn't have session check, we'll just refresh the axios header
+      // Token validation will happen naturally when making API calls
+      this.setAxiosHeader(token);
+      
+      console.log('Session refresh: Using stored credentials (no backend session check)');
+      return {
+        success: true,
+        user,
+        token,
+        message: 'Session refreshed with stored credentials'
+      };
+    } catch (error) {
+      console.error('Session refresh failed:', error);
+      return {
+        success: false,
+        error: 'Failed to refresh session'
+      };
+    }
+  }
+
+  /**
+   * Start automatic session refresh
+   * @param {number} intervalMinutes - Refresh interval in minutes (default: 15)
+   */
+  static startSessionRefresh(intervalMinutes = 15) {
+    // Since backend doesn't have session check, we don't need to refresh
+    console.log('Session refresh: Not needed (no backend session check)');
+    return;
+    
+    // Old code removed:
+    // const intervalMs = intervalMinutes * 60 * 1000;
+    // 
+    // // Clear any existing interval
+    // if (this.refreshInterval) {
+    //   clearInterval(this.refreshInterval);
+    // }
+    // 
+    // this.refreshInterval = setInterval(async () => {
+    //   try {
+    //     console.log('Refreshing session...');
+    //     const result = await this.refreshSession();
+    //     
+    //     if (!result.success) {
+    //       console.log('Session refresh failed:', result.error);
+    //       // Could emit an event here to notify the app
+    //     }
+    //   } catch (error) {
+    //     console.error('Session refresh error:', error);
+    //   }
+    // }, intervalMs);
+    // 
+    // console.log(`Session refresh started with ${intervalMinutes} minute interval`);
+  }
+
+  /**
+   * Stop automatic session refresh
+   */
+  static stopSessionRefresh() {
+    // Since we don't start refresh intervals, nothing to stop
+    console.log('Session refresh: Nothing to stop (no refresh intervals)');
+    return;
+    
+    // Old code removed:
+    // if (this.refreshInterval) {
+    //   clearInterval(this.refreshInterval);
+    //   this.refreshInterval = null;
+    //   console.log('Session refresh stopped');
+    // }
   }
 }

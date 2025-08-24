@@ -29,7 +29,7 @@ export default function LoginScreen() {
   const [backendMessage, setBackendMessage] = useState('');
 
   const router = useRouter();
-  const { sendOtp, verifyOtp, resetPasswordWithOtp } = useAuth();
+  const { login, sendOtp, verifyOtp, resetPasswordWithOtp } = useAuth();
 
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -53,31 +53,18 @@ export default function LoginScreen() {
     setBackendMessage('');
     
     try {
-      // 🔍 DEBUG: Import and call AuthService directly like crm-frontend
-      const { AuthService } = await import('../src/core/services/auth.service');
-      console.log('AuthService imported:', AuthService);
-      console.log('AuthService.login method:', AuthService?.login);
-      
-      if (!AuthService || !AuthService.login) {
-        throw new Error('Authentication service not available');
-      }
-      
-      console.log('Calling AuthService.login with:', formData);
-      const result = await AuthService.login(formData) as any;
-      console.log('AuthService.login result:', result);
+      console.log('Calling useAuth.login with:', formData);
+      const result = await login(formData);
+      console.log('useAuth.login result:', result);
       
       if (result && result.success) {
-        // Show backend message if available
-        if (result.message) {
-          setBackendMessage(result.message);
-          Alert.alert('Success', result.message, [
-            { text: 'OK', onPress: () => router.replace('/(tabs)') }
-          ]);
-        } else {
-          Alert.alert('Success', 'Login successful!', [
-            { text: 'OK', onPress: () => router.replace('/(tabs)') }
-          ]);
-        }
+        // Show success message
+        const message = result.message || 'Login successful!';
+        setBackendMessage(message);
+        
+        // Navigate to main app after successful login
+        console.log('Login successful, navigating to main app...');
+        router.replace('/(tabs)');
       } else {
         const errorMsg = result?.error || 'Login failed. Please check your credentials.';
         setBackendMessage(errorMsg);

@@ -65,6 +65,27 @@ export class FollowUpService {
   }
 
   /**
+   * Get follow-ups by lead ID
+   * @param {number|string} companyId 
+   * @param {number|string} leadId 
+   * @returns {Promise<Object>} API response
+   */
+  static async getFollowUpsByLeadId(companyId, leadId) {
+    try {
+      const response = await axios.get(`/api/${companyId}/followups/lead/${leadId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to load follow-ups for lead'
+      };
+    }
+  }
+
+  /**
    * Create new follow-up
    * @param {number|string} companyId 
    * @param {Object} followUpData 

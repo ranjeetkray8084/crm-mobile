@@ -1,6 +1,7 @@
 // useLeads Hook - Mobile-optimized version for React Native/Expo
 import { useState, useEffect, useCallback } from 'react';
 import { LeadService } from '../services/lead.service';
+import { FollowUpService } from '../services/followup.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const useLeads = (companyId, userId, userRole) => {
@@ -105,6 +106,8 @@ export const useLeads = (companyId, userId, userRole) => {
       if (result.success) {
         const leadsData = result.data.content || result.data || [];
 
+
+
         const finalLeads = !isSearching
           ? [...leadsData.filter(l => l.status !== 'CLOSED' && l.status !== 'DROPED'), ...leadsData.filter(l => l.status === 'DROPED'), ...leadsData.filter(l => l.status === 'CLOSED')]
           : leadsData;
@@ -146,7 +149,7 @@ export const useLeads = (companyId, userId, userRole) => {
     setError(null);
 
     try {
-      const result = await LeadService.createLead(leadData, userInfo.companyId);
+      const result = await LeadService.createLead(userInfo.companyId, leadData);
       
       if (result.success) {
         // Refresh the leads list
@@ -175,7 +178,7 @@ export const useLeads = (companyId, userId, userRole) => {
     setError(null);
 
     try {
-      const result = await LeadService.updateLead(leadId, updateData, userInfo.companyId);
+      const result = await LeadService.updateLead(userInfo.companyId, leadId, updateData);
       
       if (result.success) {
         // Refresh the leads list
@@ -204,7 +207,7 @@ export const useLeads = (companyId, userId, userRole) => {
     setError(null);
 
     try {
-      const result = await LeadService.deleteLead(leadId, userInfo.companyId);
+      const result = await LeadService.deleteLead(userInfo.companyId, leadId);
       
       if (result.success) {
         // Refresh the leads list
@@ -222,6 +225,196 @@ export const useLeads = (companyId, userId, userRole) => {
     }
   }, [getUserInfo, _fetchLeads, pagination.size]);
 
+  const updateLeadStatus = useCallback(async (leadId, status) => {
+    const userInfo = await getUserInfo();
+    
+    if (!userInfo || !userInfo.companyId) {
+      throw new Error('Company ID is missing or user not authenticated.');
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await LeadService.updateLeadStatus(userInfo.companyId, leadId, status);
+      
+      if (result.success) {
+        // Refresh the leads list
+        await _fetchLeads(0, pagination.size);
+        return result;
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      const errorMsg = `Failed to update lead status: ${err.response?.data?.message || err.message}`;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  }, [getUserInfo, _fetchLeads, pagination.size]);
+
+  const addRemark = useCallback(async (leadId, remarkData) => {
+    const userInfo = await getUserInfo();
+    
+    if (!userInfo || !userInfo.companyId) {
+      return { success: false, error: 'Company ID is missing or user not authenticated.' };
+    }
+
+    if (!userInfo.userId) {
+      return { success: false, error: 'User ID is missing or user not authenticated.' };
+    }
+
+    try {
+      // Add userId to the remark data as required by the backend (same as web version)
+      const data = { ...remarkData, userId: userInfo.userId };
+      
+      console.log('useLeads: Adding remark with data:', {
+        companyId: userInfo.companyId,
+        leadId: leadId,
+        remarkData: remarkData,
+        data: data,
+        userId: userInfo.userId
+      });
+      
+      const result = await LeadService.addRemarkToLead(userInfo.companyId, leadId, data);
+      
+      if (result.success) {
+        console.log('✅ Remark added successfully');
+        return { success: true, data: result.data };
+      } else {
+        console.error('❌ ' + (result.error || 'Failed to add remark'));
+        return { success: false, error: result.error };
+      }
+    } catch (err) {
+      console.error('❌ Failed to add remark:', err);
+      return { success: false, error: 'Failed to add remark' };
+    }
+  }, [getUserInfo]);
+
+  const assignLead = useCallback(async (leadId, userId, userName) => {
+    const userInfo = await getUserInfo();
+    
+    if (!userInfo || !userInfo.companyId) {
+      throw new Error('Company ID is missing or user not authenticated.');
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await LeadService.assignLead(userInfo.companyId, leadId, userId, userInfo.userId);
+      
+      if (result.success) {
+        // Refresh the leads list
+        await _fetchLeads(0, pagination.size);
+        return result;
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      const errorMsg = `Failed to assign lead: ${err.response?.data?.message || err.message}`;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  }, [getUserInfo, _fetchLeads, pagination.size]);
+
+  const unassignLead = useCallback(async (leadId) => {
+    const userInfo = await getUserInfo();
+    
+    if (!userInfo || !userInfo.companyId) {
+      throw new Error('Company ID is missing or user not authenticated.');
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await LeadService.unassignLead(userInfo.companyId, leadId, userInfo.userId);
+      
+      if (result.success) {
+        // Refresh the leads list
+        await _fetchLeads(0, pagination.size);
+        return result;
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      const errorMsg = `Failed to unassign lead: ${err.response?.data?.message || err.message}`;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  }, [getUserInfo, _fetchLeads, pagination.size]);
+
+  const getRemarks = useCallback(async (leadId) => {
+    const userInfo = await getUserInfo();
+    
+    if (!userInfo || !userInfo.companyId) {
+      throw new Error('Company ID is missing or user not authenticated.');
+    }
+
+    try {
+      const result = await LeadService.getRemarksByLeadId(userInfo.companyId, leadId);
+      return result;
+    } catch (err) {
+      const errorMsg = `Failed to get remarks: ${err.response?.data?.message || err.message}`;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }, [getUserInfo]);
+
+  const addFollowUp = useCallback(async (leadId, followUpData) => {
+    const userInfo = await getUserInfo();
+    
+    if (!userInfo || !userInfo.companyId) {
+      throw new Error('Company ID is missing or user not authenticated.');
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Add leadId to the followUpData
+      const followUpWithLead = { ...followUpData, leadId };
+      const result = await FollowUpService.createFollowUp(userInfo.companyId, followUpWithLead);
+      
+      if (result.success) {
+        // Refresh the leads list
+        await _fetchLeads(0, pagination.size);
+        return result;
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      const errorMsg = `Failed to add follow-up: ${err.response?.data?.message || err.message}`;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  }, [getUserInfo, _fetchLeads, pagination.size]);
+
+  const getFollowUps = useCallback(async (leadId) => {
+    const userInfo = await getUserInfo();
+    
+    if (!userInfo || !userInfo.companyId) {
+      throw new Error('Company ID is missing or user not authenticated.');
+    }
+
+    try {
+      const result = await FollowUpService.getFollowUpsByLeadId(userInfo.companyId, leadId);
+      return result;
+    } catch (err) {
+      const errorMsg = `Failed to get follow-ups: ${err.response?.data?.message || err.message}`;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }, [getUserInfo]);
+
   // Load leads on mount
   useEffect(() => {
     loadLeads();
@@ -238,5 +431,12 @@ export const useLeads = (companyId, userId, userRole) => {
     createLead,
     updateLead,
     deleteLead,
+    updateLeadStatus,
+    addRemark,
+    assignLead,
+    unassignLead,
+    getRemarks,
+    addFollowUp,
+    getFollowUps,
   };
 };

@@ -1,6 +1,7 @@
 // Property Service - Reusable for Web & Mobile
 import axios from '../../legacy/api/axios';
 import { API_ENDPOINTS } from './api.endpoints';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class PropertyService {
   static async getPropertiesByCompany(companyId, page = 0, size = 10, roleParams = {}) {
@@ -177,8 +178,13 @@ export class PropertyService {
 
   static async searchProperties(companyId, searchParams = {}, pageable = {}) {
     try {
-      // Check if token exists
-      const token = localStorage.getItem('token');
+      // Check if token exists - use AsyncStorage for React Native
+      let token;
+      try {
+        token = await AsyncStorage.getItem('crm_token');
+      } catch (storageError) {
+        console.warn('Failed to get token from storage:', storageError);
+      }
       
       if (!token) {
         return {
@@ -294,9 +300,18 @@ export class PropertyService {
 
   static async getRemarksByPropertyId(companyId, propertyId) {
     try {
-      const response = await axios.get(API_ENDPOINTS.PROPERTIES.GET_REMARKS(companyId, propertyId));
+      console.log('PropertyService: getRemarksByPropertyId called with companyId:', companyId, 'propertyId:', propertyId);
+      const url = API_ENDPOINTS.PROPERTIES.GET_REMARKS(companyId, propertyId);
+      console.log('PropertyService: API URL:', url);
+      
+      const response = await axios.get(url);
+      console.log('PropertyService: API response status:', response.status);
+      console.log('PropertyService: API response data:', response.data);
+      
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('PropertyService: API error:', error);
+      console.error('PropertyService: Error response:', error.response);
       return { success: false, error: error.response?.data?.message || 'Failed to load remarks' };
     }
   }

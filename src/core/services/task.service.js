@@ -1,5 +1,16 @@
+import { API_ENDPOINTS } from './api.endpoints';
 import axios from '../../legacy/api/axios';
-import { API_ENDPOINTS, buildUrl } from './api.endpoints';
+
+// Helper function to build URL with query parameters (same as crm-frontend)
+const buildUrl = (endpoint, params = {}) => {
+  const url = new URL(endpoint, 'http://localhost:8082'); // Use base URL for React Native
+  Object.keys(params).forEach(key => {
+    if (params[key] !== null && params[key] !== undefined) {
+      url.searchParams.append(key, params[key]);
+    }
+  });
+  return url.pathname + url.search;
+};
 
 export class TaskService {
   // ✅ Get all tasks by company

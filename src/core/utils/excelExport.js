@@ -1,7 +1,10 @@
 /**
- * Common Excel Export Utility
- * Provides functionality to export table data to Excel format
+ * Common Excel Export Utility for React Native
+ * Provides functionality to export table data to CSV format
  */
+
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 /**
  * Format value for export
@@ -93,32 +96,53 @@ const convertToCSV = (data, columns) => {
 };
 
 /**
- * Download CSV as Excel file
+ * Save CSV file and share it
  * @param {string} csvContent - CSV content string
- * @param {string} filename - Name of the file to download
+ * @param {string} filename - Name of the file to save
  */
-const downloadCSV = (csvContent, filename) => {
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+const saveAndShareCSV = async (csvContent, filename) => {
+  try {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const finalFilename = `${filename}_${timestamp}.csv`;
+    
+    // Create file path in app's documents directory
+    const fileUri = `${FileSystem.documentDirectory}${finalFilename}`;
+    
+    // Write CSV content to file
+    await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+      encoding: FileSystem.EncodingType.UTF8
+    });
+    
+    // Check if sharing is available
+    const isAvailable = await Sharing.isAvailableAsync();
+    
+    if (isAvailable) {
+      // Share the file
+      await Sharing.shareAsync(fileUri, {
+        mimeType: 'text/csv',
+        dialogTitle: `Export ${filename}`,
+        UTI: 'public.comma-separated-values-text'
+      });
+    } else {
+      // If sharing is not available, just save the file
+      console.log(`File saved to: ${fileUri}`);
+      return { success: true, message: `File saved to device: ${finalFilename}` };
+    }
+    
+    return { success: true, message: `Exported ${filename} successfully` };
+  } catch (error) {
+    console.error('Error saving/sharing CSV:', error);
+    return { success: false, message: `Export failed: ${error.message}` };
   }
 };
 
 /**
- * Export table data to Excel (CSV format)
+ * Export table data to CSV format
  * @param {Array} data - Array of objects to export
  * @param {Array} columns - Array of column definitions
  * @param {string} filename - Name of the exported file
  */
-export const exportToExcel = (data, columns, filename) => {
+export const exportToExcel = async (data, columns, filename) => {
   try {
     // Validate inputs
     if (!Array.isArray(data)) {
@@ -134,14 +158,15 @@ export const exportToExcel = (data, columns, filename) => {
     }
     
     const csvContent = convertToCSV(data, columns);
-    const timestamp = new Date().toISOString().split('T')[0];
-    const finalFilename = `${filename}_${timestamp}.csv`;
+    const result = await saveAndShareCSV(csvContent, filename);
     
-    downloadCSV(csvContent, finalFilename);
-    
-    return { success: true, message: `Exported ${data.length} records to ${finalFilename}` };
+    if (result.success) {
+      return { success: true, message: `Exported ${data.length} records to ${filename}` };
+    } else {
+      return result;
+    }
   } catch (error) {
-    
+    console.error('Export error:', error);
     return { success: false, message: `Export failed: ${error.message}` };
   }
 };
@@ -182,14 +207,14 @@ export const COLUMN_CONFIGS = {
  * Helper function to export leads data
  * @param {Array} leads - Array of lead objects
  */
-export const exportLeads = (leads) => {
-  return exportToExcel(leads, COLUMN_CONFIGS.leads, 'leads_export');
+export const exportLeads = async (leads) => {
+  return await exportToExcel(leads, COLUMN_CONFIGS.leads, 'leads_export');
 };
 
 /**
  * Helper function to export properties data
  * @param {Array} properties - Array of property objects
  */
-export const exportProperties = (properties) => {
-  return exportToExcel(properties, COLUMN_CONFIGS.properties, 'properties_export');
+export const exportProperties = async (properties) => {
+  return await exportToExcel(properties, COLUMN_CONFIGS.properties, 'properties_export');
 };

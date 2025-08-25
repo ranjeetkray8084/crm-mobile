@@ -109,15 +109,7 @@ const PropertiesList: React.FC<PropertiesListProps> = ({
           tintColor="#3b82f6"
         />
       }
-      ListFooterComponent={
-        properties.length > 0 ? (
-          <View style={styles.listFooter}>
-            <Text style={styles.listFooterText}>
-              Showing {properties.length} properties
-            </Text>
-          </View>
-        ) : null
-      }
+     
     />
   );
 };

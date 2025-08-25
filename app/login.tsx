@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../src/shared/contexts/AuthContext';
+import Logo from '../src/components/common/Logo';
 
 export default function LoginScreen() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -403,7 +404,7 @@ export default function LoginScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoContainer}>
-              <Ionicons name="business-outline" size={60} color="#1c69ff" />
+              <Logo size="large" />
             </View>
             <Text style={styles.appName}>LEADS TRACKER</Text>
             <Text style={styles.appTagline}>Track Leads, Close Faster</Text>

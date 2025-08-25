@@ -48,25 +48,7 @@ const LeadToolbar: React.FC<LeadToolbarProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>Lead Management</Text>
-          <Text style={styles.subtitle}>
-            {isSearchActive ? 'Search Results' : `${leadsCount} Leads`}
-          </Text>
-        </View>
-        
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.addLeadButton} onPress={onAddLead}>
-            <Ionicons name="add" size={16} color="#fff" />
-            <Text style={styles.addLeadButtonText}>Add Lead</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={onExport}>
-            <Ionicons name="download-outline" size={20} color="#6b7280" />
-          </TouchableOpacity>
-        </View>
-      </View>
+     
 
       {/* Search Section */}
       <View style={styles.searchSection}>
@@ -83,12 +65,16 @@ const LeadToolbar: React.FC<LeadToolbarProps> = ({
             onBlur={() => setIsSearchFocused(false)}
             returnKeyType="search"
           />
+          
           {searchTerm.length > 0 && (
             <TouchableOpacity onPress={() => onSearchChange('')} style={styles.clearSearchButton}>
               <Ionicons name="close-circle" size={20} color="#9ca3af" />
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity style={styles.iconButton} onPress={onExport}>
+            <Ionicons name="download-outline" size={20} color="#6b7280" />
+          </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.filterToggleButton, hasActiveFilters && styles.filterToggleButtonActive]}

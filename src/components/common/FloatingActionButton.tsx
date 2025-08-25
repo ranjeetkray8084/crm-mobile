@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../shared/contexts/AuthContext';
 
 interface AddOption {
@@ -19,11 +20,27 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 export default function FloatingActionButton({ onAddAction }: FloatingActionButtonProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const translateYAnim = useRef(new Animated.Value(10)).current;
   const rippleAnim = useRef(new Animated.Value(0)).current;
   const rippleScale = useRef(new Animated.Value(0)).current;
+  const isMounted = useRef(true);
+
+  // Cleanup on unmount to prevent memory leaks and property access issues
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Safe state setter that checks if component is still mounted
+  const safeSetShowDropdown = useCallback((value: boolean) => {
+    if (isMounted.current) {
+      setShowDropdown(value);
+    }
+  }, []);
 
   const getAddOptions = (): AddOption[] => {
     const userRole = user?.role?.toUpperCase() || 'USER';
@@ -78,7 +95,7 @@ export default function FloatingActionButton({ onAddAction }: FloatingActionButt
     ]).start();
   };
 
-  const toggleDropdown = () => {
+  const toggleDropdown = useCallback(() => {
     if (showDropdown) {
       // Close dropdown
       Animated.parallel([
@@ -98,11 +115,11 @@ export default function FloatingActionButton({ onAddAction }: FloatingActionButt
           useNativeDriver: true,
         }),
       ]).start(() => {
-        setShowDropdown(false);
+        safeSetShowDropdown(false);
       });
     } else {
       // Open dropdown
-      setShowDropdown(true);
+      safeSetShowDropdown(true);
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -121,12 +138,36 @@ export default function FloatingActionButton({ onAddAction }: FloatingActionButt
         }),
       ]).start();
     }
-  };
+  }, [showDropdown, fadeAnim, scaleAnim, translateYAnim, safeSetShowDropdown]);
 
-  const handleOptionPress = (optionId: string) => {
-    onAddAction(optionId);
-    toggleDropdown();
-  };
+  const handleOptionPress = useCallback((optionId: string) => {
+    try {
+      console.log('FloatingActionButton: handleOptionPress called with optionId:', optionId);
+      
+      // Ensure onAddAction is a valid function
+      if (typeof onAddAction === 'function') {
+        // Use setTimeout to ensure the callback happens in the next tick
+        // This can help avoid Hermes property configuration issues
+        setTimeout(() => {
+          try {
+            if (isMounted.current) {
+              onAddAction(optionId);
+            }
+          } catch (error) {
+            console.error('FloatingActionButton: Error in onAddAction callback:', error);
+          }
+        }, 0);
+      } else {
+        console.error('FloatingActionButton: onAddAction is not a function');
+      }
+      
+      toggleDropdown();
+    } catch (error) {
+      console.error('FloatingActionButton: handleOptionPress error:', error);
+      // Still try to close the dropdown even if there's an error
+      toggleDropdown();
+    }
+  }, [onAddAction, toggleDropdown]);
 
   const handleFabPress = () => {
     animateRipple();
@@ -140,7 +181,7 @@ export default function FloatingActionButton({ onAddAction }: FloatingActionButt
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { bottom: 100 + Math.max(insets.bottom, 0) }]}>
       {/* Dropdown Menu */}
       {showDropdown && (
         <Animated.View

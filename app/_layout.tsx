@@ -3,6 +3,7 @@ import { AuthProvider } from "../src/shared/contexts/AuthContext";
 import { useEffect, useState } from "react";
 import { AuthService } from "../src/core/services/auth.service";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function RootLayout() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -49,13 +50,16 @@ export default function RootLayout() {
   console.log('RootLayout: Rendering with initial route:', initialRoute);
 
   return (
-    <AuthProvider>
-      <Stack initialRouteName={initialRoute || 'login'}>
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <Stack initialRouteName={initialRoute || 'login'}>
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="add" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 

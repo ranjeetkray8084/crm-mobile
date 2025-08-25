@@ -6,9 +6,11 @@ import { useTasks } from '../../src/core/hooks/useTasks';
 import TaskCard from '../../src/components/tasks/TaskCard';
 import TaskUploadForm from '../../src/components/tasks/TaskUploadForm';
 import TabScreenWrapper from '../../src/components/common/TabScreenWrapper';
+import { useRouter, useFocusEffect } from 'expo-router';
 
 export default function TasksScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -47,10 +49,50 @@ export default function TasksScreen() {
     }
   }, [error, clearError]);
 
+  // Reset showUploadForm when screen comes back into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      setShowUploadForm(false);
+    }, [])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshTasks();
     setRefreshing(false);
+  };
+
+  const handleAddAction = (actionId: string) => {
+    try {
+      console.log('TasksScreen: handleAddAction called with actionId:', actionId);
+      
+      let targetRoute: string;
+      
+      switch (actionId) {
+        case 'User':
+          targetRoute = '/add?action=User';
+          break;
+        case 'Lead':
+          targetRoute = '/add?action=Lead';
+          break;
+        case 'Properties':
+          targetRoute = '/add?action=Properties';
+          break;
+        case 'Notes':
+          targetRoute = '/add?action=Notes';
+          break;
+        case 'Task':
+          targetRoute = '/add?action=Task';
+          break;
+        default:
+          targetRoute = '/add';
+          break;
+      }
+
+      router.push(targetRoute);
+    } catch (error) {
+      console.error('TasksScreen: handleAddAction error:', error);
+    }
   };
 
   const handleOpen = (taskId: string) => {
@@ -166,16 +208,7 @@ export default function TasksScreen() {
               <Ionicons name="list-outline" size={28} color="#1c69ff" />
               <Text style={styles.title}>Task Management</Text>
             </View>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowUploadForm(!showUploadForm)}
-            >
-              <Ionicons 
-                name={showUploadForm ? "close" : "add"} 
-                size={24} 
-                color="#fff" 
-              />
-            </TouchableOpacity>
+            
           </View>
         
         {!showUploadForm && (
@@ -261,6 +294,9 @@ export default function TasksScreen() {
           ))
         )}
       </ScrollView>
+      
+      {/* Floating Action Button */}
+    
       </View>
     </TabScreenWrapper>
   );

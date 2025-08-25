@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../src/shared/contexts/AuthContext';
-import TabScreenWrapper from '../../src/components/common/TabScreenWrapper';
-import AddLeadForm from '../../src/components/forms/AddLeadForm';
-import AddPropertyForm from '../../src/components/forms/AddPropertyForm';
-import AddNoteForm from '../../src/components/forms/AddNoteForm';
-import AddTaskForm from '../../src/components/forms/AddTaskForm';
-import AddUserForm from '../../src/components/forms/AddUserForm';
+import { useAuth } from '../src/shared/contexts/AuthContext';
+import TabScreenWrapper from '../src/components/common/TabScreenWrapper';
+import AddLeadForm from '../src/components/forms/AddLeadForm';
+import AddPropertyForm from '../src/components/forms/AddPropertyForm';
+import AddNoteForm from '../src/components/forms/AddNoteForm';
+import AddTaskForm from '../src/components/forms/AddTaskForm';
+import AddUserForm from '../src/components/forms/AddUserForm';
 
 interface AddOption {
   id: string;
@@ -177,13 +177,29 @@ export default function AddScreen() {
   };
 
   const renderForm = () => {
+    const userContext = {
+      companyId: user?.companyId?.toString() || '',
+      userId: user?.userId?.toString() || user?.id?.toString() || '',
+      userRole: user?.role || ''
+    };
+
+    console.log('AddScreen: renderForm called with action:', selectedAction);
+    console.log('AddScreen: userContext:', userContext);
+
     switch (selectedAction) {
       case 'User':
         return <AddUserForm onSuccess={handleFormSuccess} onCancel={handleFormCancel} />;
       case 'Lead':
         return <AddLeadForm onSuccess={handleFormSuccess} onCancel={handleFormCancel} />;
       case 'Properties':
-        return <AddPropertyForm onSuccess={handleFormSuccess} onCancel={handleFormCancel} />;
+        console.log('AddScreen: Rendering AddPropertyForm');
+        return <AddPropertyForm 
+          onSuccess={handleFormSuccess} 
+          onCancel={handleFormCancel}
+          companyId={userContext.companyId}
+          userId={userContext.userId}
+          userRole={userContext.userRole}
+        />;
       case 'Notes':
         return <AddNoteForm onSuccess={handleFormSuccess} onCancel={handleFormCancel} />;
       case 'Task':
@@ -197,6 +213,7 @@ export default function AddScreen() {
 
   // If a specific action is selected, show the form
   if (selectedAction) {
+    console.log('AddScreen: Rendering form for action:', selectedAction);
     return (
       <TabScreenWrapper>
         <View style={styles.formContainer}>
@@ -211,7 +228,9 @@ export default function AddScreen() {
               Add {addOptions.find(opt => opt.id === selectedAction)?.label}
             </Text>
           </View>
-          {renderForm()}
+          <View style={{ flex: 1 }}>
+            {renderForm()}
+          </View>
         </View>
       </TabScreenWrapper>
     );

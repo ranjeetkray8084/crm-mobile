@@ -135,23 +135,7 @@ export default function NotificationsSection({ onSectionChange }: NotificationsS
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity 
-            style={styles.backButton} 
-            onPress={() => onSectionChange?.('dashboard')}
-          >
-            <Ionicons name="arrow-back" size={24} color="#1c69ff" />
-            <Text style={styles.backButtonText}>Back to Dashboard</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.headerRight}>
-            {unreadCount > 0 && (
-              <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllAsRead}>
-                <Text style={styles.markAllButtonText}>Mark all as read</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
+        
         
         <View style={styles.titleContainer}>
           <Text style={styles.title}>Notifications</Text>

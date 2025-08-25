@@ -1,23 +1,19 @@
 // src/components/Dashboard.tsx
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  RefreshControl,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Sidebar from "./common/Sidebar";
-import NotificationDropdown from "./common/NotificationDropdown";
-import DashboardStats from "./dashboard/DashboardStats";
-import DashboardEvents from "./dashboard/DashboardEvents";
-import DashboardFollowUps from "./dashboard/DashboardFollowUps";
-import NotificationsSection from "./notifications/NotificationsSection";
-import { UserSection, AdminSection } from "./index";
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../shared/contexts/AuthContext';
+import { useResponsive } from '../core/hooks/useResponsive';
+import Sidebar from './common/Sidebar';
+import NotificationDropdown from './common/NotificationDropdown';
+import DashboardStats from './dashboard/DashboardStats';
+import DashboardEvents from './dashboard/DashboardEvents';
+import DashboardFollowUps from './dashboard/DashboardFollowUps';
+import NotificationsSection from './notifications/NotificationsSection';
+import UserSection from './users/UserSection';
+import AdminSection from './admins/AdminSection';
+import Logo from "./common/Logo";
 
 interface DashboardProps {
   onMenuPress?: () => void;
@@ -30,27 +26,39 @@ export default function Dashboard({
   onNotificationPress,
   onLogoutPress,
 }: DashboardProps) {
-  const [showSidebar, setShowSidebar] = useState(false);
+  const responsive = useResponsive();
+  const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [showSidebar, setShowSidebar] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Simplified functions to avoid Hermes issues
   const handleSidebarToggle = () => {
-    setShowSidebar(!showSidebar);
+    setShowSidebar(prev => !prev);
   };
 
   const handleSectionChange = (section: string) => {
     setActiveSection(section);
-    // Close sidebar when a section is selected
     setShowSidebar(false);
   };
 
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setIsRefreshing(true);
-    // Add a small delay to show the refresh indicator
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
   };
+
+  // Handle case when user is not available
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const getSectionTitle = () => {
     switch (activeSection) {
@@ -172,41 +180,41 @@ export default function Dashboard({
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
       {/* StatusBar */}
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      {/* Fixed Header - Keep existing header */}
-      <View style={styles.header}>
+      {/* Fixed Header */}
+      <View style={[styles.header, responsive.getResponsiveHeaderStyles()]}>
         <View style={styles.headerTop}>
-          {(activeSection !== 'dashboard') ? (
+          {activeSection !== 'dashboard' ? (
             <TouchableOpacity
-              style={styles.menuButton}
+              style={[styles.menuButton, responsive.getResponsiveButtonStyles()]}
               onPress={() => handleSectionChange('dashboard')}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={24} color="#374151" />
+              <Ionicons name="arrow-back" size={responsive.getResponsiveIconSize()} color="#374151" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              style={styles.menuButton}
+              style={[styles.menuButton, responsive.getResponsiveButtonStyles()]}
               onPress={handleSidebarToggle}
               activeOpacity={0.7}
             >
-              <Ionicons name="menu" size={24} color="#374151" />
+              <Ionicons name="menu" size={responsive.getResponsiveIconSize()} color="#374151" />
             </TouchableOpacity>
           )}
 
           <View style={styles.appTitleContainer}>
             <View style={styles.appIcon}>
-              <Text style={styles.appIconText}>LT</Text>
+              <Logo size="small" />
             </View>
             <View style={styles.titleTextContainer}>
-              <Text style={styles.appTitle}>
+              <Text style={[styles.appTitle, { fontSize: Math.max(responsive.getResponsiveFontSize(22), 18) }]} numberOfLines={1} adjustsFontSizeToFit={true} minimumFontScale={0.8}>
                 {getSectionTitle()}
               </Text>
-              {(activeSection !== 'dashboard') && (
-                <Text style={styles.appSubtitle}>
+              {activeSection !== 'dashboard' && (
+                <Text style={[styles.appSubtitle, { fontSize: responsive.getResponsiveFontSize(12) }]} numberOfLines={1}>
                   {getSectionSubtitle()}
                 </Text>
               )}
@@ -228,7 +236,7 @@ export default function Dashboard({
       />
 
       {/* Breadcrumb Navigation */}
-      {(activeSection !== 'dashboard') && (
+      {activeSection !== 'dashboard' && (
         <View style={styles.breadcrumb}>
           <TouchableOpacity onPress={() => handleSectionChange('dashboard')}>
             <Text style={styles.breadcrumbItem}>Dashboard</Text>
@@ -257,8 +265,8 @@ export default function Dashboard({
         {renderSectionContent()}
       </ScrollView>
 
-      {/* Floating Action Button for Quick Navigation */}
-      {(activeSection !== 'dashboard') && (
+      {/* Floating Action Button */}
+      {activeSection !== 'dashboard' && (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => handleSectionChange('dashboard')}
@@ -274,98 +282,96 @@ export default function Dashboard({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#f8fafc',
   },
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
   },
 
-  // Header Styles (fixed) - Keep existing styles
+  // Header Styles
   header: {
     backgroundColor: "#fff",
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e2e8f0",
-    shadowColor: "#000",
+    borderBottomColor: '#e2e8f0',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 3,
-    zIndex: 10, // keep above content
+    zIndex: 10,
   },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    minHeight: 44,
+    minHeight: 60,
+    padding: 0,
+    paddingHorizontal: 4,
   },
   menuButton: {
-    padding: 12,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: "#f8fafc",
+    marginRight: 4,
   },
   appTitleContainer: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    justifyContent: "center",
-    marginHorizontal: 20,
+    justifyContent: "flex-start",
+    paddingHorizontal: 8,
+    marginLeft: 4,
+    marginRight: 8,
   },
   appIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#1c69ff",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 14,
-    shadowColor: "#1c69ff",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  appIconText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
+    marginRight: 8,
+    flexShrink: 0,
   },
   titleTextContainer: {
     flex: 1,
-    alignItems: "center",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    minWidth: 0,
+    paddingRight: 4,
   },
   appTitle: {
-    fontSize: 22,
     fontWeight: "bold",
     color: "#1e293b",
-    textAlign: "center",
+    textAlign: "left",
+    flexShrink: 0,
+    includeFontPadding: false,
+    letterSpacing: 0.2,
   },
   appSubtitle: {
-    fontSize: 12,
     color: "#6b7280",
     marginTop: 2,
-    textAlign: "center",
+    textAlign: "left",
+    flexShrink: 0,
+    includeFontPadding: false,
   },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
+    flexShrink: 0,
+    marginLeft: 4,
   },
 
   // Dashboard Sections
   dashboardSections: {
     padding: 20,
-    paddingTop: 8,
     gap: 16,
+    paddingTop: 8,
   },
 
   // Section Cards
   sectionCard: {
     backgroundColor: '#fff',
     padding: 20,
-    borderRadius: 12,
+    gap: 16,
+    borderRadius: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -426,5 +432,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#6b7280',
   },
 });

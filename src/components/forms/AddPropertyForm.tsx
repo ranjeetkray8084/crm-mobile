@@ -7,9 +7,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 interface AddPropertyFormProps {
   onSuccess: () => void;
   onCancel: () => void;
+  companyId?: string;
+  userId?: string;
+  userRole?: string;
 }
 
-const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }) => {
+const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ 
+  onSuccess, 
+  onCancel, 
+  companyId: propCompanyId, 
+  userId: propUserId, 
+  userRole: propUserRole 
+}) => {
   const [form, setForm] = useState({
     propertyName: '',
     type: 'Residential',
@@ -32,13 +41,20 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }
   const [isBroker, setIsBroker] = useState(false);
   const [disableBhk, setDisableBhk] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [companyId, setCompanyId] = useState<string>('');
-  const [userId, setUserId] = useState<string>('');
+  const [companyId, setCompanyId] = useState<string>(propCompanyId || '');
+  const [userId, setUserId] = useState<string>(propUserId || '');
 
-  const { createProperty } = useProperties(companyId, userId, '');
+  const { createProperty } = useProperties(companyId, userId, propUserRole || '');
 
   useEffect(() => {
     const loadUserInfo = async () => {
+      // Use props if available, otherwise fall back to AsyncStorage
+      if (propCompanyId && propUserId) {
+        setCompanyId(propCompanyId);
+        setUserId(propUserId);
+        return;
+      }
+
       try {
         const userData = await AsyncStorage.getItem('crm_user');
         if (userData) {
@@ -52,7 +68,7 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }
     };
 
     loadUserInfo();
-  }, []);
+  }, [propCompanyId, propUserId]);
 
   useEffect(() => {
     toggleBhkField(form.type);
@@ -77,6 +93,11 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }
   };
 
   const handleSubmit = async () => {
+    console.log('AddPropertyForm: handleSubmit called');
+    console.log('AddPropertyForm: companyId:', companyId);
+    console.log('AddPropertyForm: userId:', userId);
+    console.log('AddPropertyForm: form data:', form);
+
     if (!form.propertyName.trim() || !form.sector.trim() || !form.ownerName.trim() || !form.ownerContact.trim()) {
       Alert.alert('Error', 'Please fill all required fields');
       return;
@@ -84,6 +105,11 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }
 
     if (form.source === 'Reference' && !form.referenceName.trim()) {
       Alert.alert('Error', 'Please enter the reference name');
+      return;
+    }
+
+    if (!companyId || !userId) {
+      Alert.alert('Error', 'Company ID or User ID is missing. Please try again.');
       return;
     }
 
@@ -107,8 +133,11 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }
       createdBy: { userId },
     };
 
+    console.log('AddPropertyForm: Submitting payload:', payload);
+
     try {
       const result = await createProperty(payload);
+      console.log('AddPropertyForm: createProperty result:', result);
 
       if (result.success) {
         Alert.alert('Success', 'Property created successfully!');
@@ -134,6 +163,7 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }
         Alert.alert('Error', result.error || 'Failed to create property');
       }
     } catch (err: any) {
+      console.error('AddPropertyForm: Error in handleSubmit:', err);
       Alert.alert('Error', err.message || 'Error creating property');
     } finally {
       setIsSubmitting(false);
@@ -143,12 +173,16 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }
   const getPriceLabel = () =>
     ['Office', 'Retail'].includes(form.type) ? 'Lease Amount' : 'Price';
 
+  console.log('AddPropertyForm: Rendering form component');
+  
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Ionicons name="business" size={24} color="white" />
         <Text style={styles.headerText}>Add New Property</Text>
       </View>
+      
+     
 
       <View style={styles.form}>
         {/* Property Name */}

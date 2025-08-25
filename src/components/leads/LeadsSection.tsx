@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useLeads } from '../../core/hooks/useLeads';
 import { useLeadSearch } from '../../core/hooks/useLeadSearch';
 import { useUsers } from '../../core/hooks/useUsers';
+import { exportLeads } from '../../core/utils/excelExport';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -20,6 +21,7 @@ import LeadRemarksModal from './modals/LeadRemarksModal';
 import AddFollowUpModal from './modals/AddFollowUpModal';
 import ViewFollowUpsModal from './modals/ViewFollowUpsModal';
 import AddLeadForm from './AddLeadForm';
+import Logo from '../common/Logo';
 import { Lead } from '../../types/lead';
 
 interface LeadsSectionProps {
@@ -184,14 +186,26 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
     setShowFilters(!showFilters);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!leads || leads.length === 0) {
-      // Show alert for no leads to export
+      Alert.alert('Export', 'No leads to export');
       return;
     }
     
-    // TODO: Implement export functionality
-    console.log('Export functionality coming soon');
+    try {
+      Alert.alert('Export', 'Exporting leads...', [], { cancelable: false });
+      
+      const result = await exportLeads(leads);
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
+      } else {
+        Alert.alert('Export Failed', result.message);
+      }
+    } catch (error: any) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', `Failed to export leads: ${error.message}`);
+    }
   };
 
   const actionHandlers = {
@@ -210,6 +224,8 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
   return (
     <View style={styles.container}>
       <View style={styles.content}>
+    
+        
         <LeadToolbar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -265,14 +281,7 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
         )}
       </View>
 
-      {/* Floating Action Button - Removed */}
-      {/* <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setShowAddLeadForm(true)}
-        activeOpacity={0.8}
-      >
-        <Ionicons name="add" size={24} color="#fff" />
-      </TouchableOpacity> */}
+     
 
       {/* MODALS */}
       <AddLeadForm
@@ -366,6 +375,11 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: 'center',
     alignItems: 'stretch',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingVertical: 10,
   },
   // fab: {
   //   position: 'absolute',

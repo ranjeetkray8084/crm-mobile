@@ -4,11 +4,7 @@ import { useState, useEffect } from 'react';
 // Direct import - let's see if this works
 import { AuthService } from '../services/auth.service';
 
-console.log('=== useAuth hook loaded ===');
-console.log('AuthService imported:', AuthService);
-console.log('AuthService type:', typeof AuthService);
-console.log('AuthService.login exists:', !!AuthService?.login);
-console.log('AuthService.login type:', typeof AuthService?.login);
+
 
 export const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -18,28 +14,18 @@ export const useAuth = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        console.log('useAuth: Initializing authentication...');
-        
         // Check for stored credentials
         const currentUser = await AuthService.getCurrentUser();
         const token = await AuthService.getToken();
-
-        console.log('useAuth: Stored user:', currentUser ? 'Yes' : 'No');
-        console.log('useAuth: Stored token:', token ? 'Yes' : 'No');
 
         if (currentUser && token) {
           // Set axios header for future requests
           AuthService.setAxiosHeader(token);
           
           // Since backend doesn't have session check, we'll just use stored credentials
-          console.log('useAuth: Using stored credentials (no backend session check)');
           setUser(currentUser);
           setIsAuthenticated(true);
-          
-          // No need for session refresh since backend doesn't have session check
-          console.log('useAuth: Session refresh not needed (no backend session check)');
         } else {
-          console.log('useAuth: No stored credentials found');
           setUser(null);
           setIsAuthenticated(false);
         }

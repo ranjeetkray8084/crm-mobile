@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../core/hooks/useAuth';
+import { useAuth } from '../../shared/contexts/AuthContext';
 import { useDashboardEvents } from '../../core/hooks/useDashboardEvents';
 
 const DashboardEvents = () => {

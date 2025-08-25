@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../shared/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import useResponsive from '../../core/hooks/useResponsive';
+import Logo from './Logo';
 
 interface SidebarProps {
   isVisible: boolean;
@@ -26,6 +28,8 @@ export default function Sidebar({
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const responsive = useResponsive();
+  const styles = getStyles(responsive);
 
   const getMenuItems = () => {
     const commonItems = [
@@ -96,7 +100,7 @@ export default function Sidebar({
             <View style={styles.header}>
               <View style={styles.logoContainer}>
                 <View style={styles.logo}>
-                  <Text style={styles.logoText}>LT</Text>
+                  <Logo size="small" />
                 </View>
                 <View style={styles.titleContainer}>
                   <Text style={styles.title}>LeadsTracker</Text>
@@ -161,7 +165,7 @@ export default function Sidebar({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (responsive: any) => StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0,
@@ -184,7 +188,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 20,
+    ...responsive.getResponsiveValue('contentPadding'),
     paddingTop: 40,
     borderBottomWidth: 1,
     borderBottomColor: '#374151',
@@ -198,35 +202,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#3b82f6',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#1f2937',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  logoText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    padding: 8,
   },
   titleContainer: {
     flex: 1,
   },
   title: {
-    fontSize: 18,
+    fontSize: responsive.getResponsiveFontSize(18),
     fontWeight: 'bold',
     color: '#fff',
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: responsive.getResponsiveFontSize(12),
     color: '#9ca3af',
     marginTop: 2,
   },
   navigation: {
     flex: 1,
-    padding: 16,
+    ...responsive.getResponsiveValue('contentPadding'),
   },
   menuItems: {
     marginBottom: 20,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#374151',
   },
   menuLabel: {
-    fontSize: 16,
+    fontSize: responsive.getResponsiveFontSize(16),
     color: '#9ca3af',
     marginLeft: 12,
     fontWeight: '500',
@@ -263,13 +263,13 @@ const styles = StyleSheet.create({
     borderColor: '#ef4444',
   },
   logoutLabel: {
-    fontSize: 16,
+    fontSize: responsive.getResponsiveFontSize(16),
     color: '#ef4444',
     marginLeft: 12,
     fontWeight: '500',
   },
   footer: {
-    padding: 20,
+    ...responsive.getResponsiveValue('contentPadding'),
     borderTopWidth: 1,
     borderTopColor: '#374151',
   },

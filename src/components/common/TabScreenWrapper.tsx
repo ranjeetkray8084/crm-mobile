@@ -1,30 +1,21 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, StyleSheet, Text } from 'react-native';
 
 interface TabScreenWrapperProps {
   children: React.ReactNode;
 }
 
 export default function TabScreenWrapper({ children }: TabScreenWrapperProps) {
-  const router = useRouter();
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.contentWrapper}>
-          {children}
-        </View>
+    <View style={styles.container}>
+      <View style={styles.contentWrapper}>
+        {children || <Text>No content to display</Text>}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-  },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
@@ -34,7 +25,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 20,
     paddingBottom: 20,
-    justifyContent: 'center',
+    // Remove justifyContent: 'center' as it might be centering the form and making it invisible
     alignItems: 'stretch',
   },
 });

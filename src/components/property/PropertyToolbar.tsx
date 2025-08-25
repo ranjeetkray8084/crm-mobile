@@ -46,21 +46,6 @@ const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header Section */}
-      <View style={styles.header}>
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>Property Management</Text>
-          <Text style={styles.subtitle}>
-            {isSearchActive ? 'Search Results' : `${propertiesCount} Properties`}
-          </Text>
-        </View>
-        
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.iconButton} onPress={onExport}>
-            <Ionicons name="download-outline" size={20} color="#6b7280" />
-          </TouchableOpacity>
-        </View>
-      </View>
 
       {/* Search Section */}
       <View style={styles.searchSection}>
@@ -83,6 +68,9 @@ const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity style={styles.iconButton} onPress={onExport}>
+            <Ionicons name="download-outline" size={20} color="#6b7280" />
+          </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.filterToggleButton, hasActiveFilters && styles.filterToggleButtonActive]}

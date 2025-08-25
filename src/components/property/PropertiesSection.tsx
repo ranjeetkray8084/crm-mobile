@@ -3,11 +3,12 @@ import { View, StyleSheet, Alert } from 'react-native';
 import { useProperties } from '../../core/hooks/useProperties';
 import { usePropertySearch } from '../../core/hooks/usePropertySearch';
 import { useUsers } from '../../core/hooks/useUsers';
+import { exportProperties } from '../../core/utils/excelExport';
 import PropertyToolbar from './PropertyToolbar';
 import PropertyFilters from './PropertyFilters';
 import PropertiesList from './PropertiesList';
 import SearchResultsSummary from './SearchResultsSummary';
-import PropertiesFeedback from './PropertiesFeedback';
+
 import UpdatePropertyModal from './modals/UpdatePropertyModal';
 import AddRemarkModal from './modals/AddRemarkModal';
 import PropertyRemarksModal from './modals/PropertyRemarksModal';
@@ -186,14 +187,26 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
     Alert.alert('Out of Box', `Out of Box action triggered for: ${property.propertyName || property.name}`);
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!properties || properties.length === 0) {
       Alert.alert('Export', 'No properties to export');
       return;
     }
     
-    // TODO: Implement export functionality
-    Alert.alert('Export', 'Export functionality coming soon');
+    try {
+      Alert.alert('Export', 'Exporting properties...', [], { cancelable: false });
+      
+      const result = await exportProperties(properties);
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
+      } else {
+        Alert.alert('Export Failed', result.message);
+      }
+    } catch (error: any) {
+      console.error('Export error:', error);
+      Alert.alert('Export Failed', `Failed to export properties: ${error.message}`);
+    }
   };
 
   const handleAddProperty = () => {
@@ -257,12 +270,7 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
         companyId={companyId}
       />
 
-      <PropertiesFeedback
-        loading={loading}
-        error={error}
-        propertiesCount={properties.length}
-        isSearchActive={isSearchActive}
-      />
+
 
       {/* MODALS */}
       <UpdatePropertyModal

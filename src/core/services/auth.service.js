@@ -5,8 +5,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class AuthService {
   static SESSION_KEYS = {
-    TOKEN: 'crm_token',
-    USER: 'crm_user',
+    TOKEN: 'token',
+    USER: 'user',
     CURRENT_TASK: 'currentTaskId',
     EXCEL_STATE: 'excelEditorState',
     LAST_ROUTE: 'lastRoute'
@@ -25,24 +25,14 @@ export class AuthService {
    */
   static async login(credentials) {
     console.log('=== AuthService.login START ===');
-    console.log('AuthService: Attempting login to:', API_ENDPOINTS.AUTH.LOGIN);
-    console.log('AuthService: Credentials:', { email: credentials.email, password: '***' });
     
     try {
-      console.log('AuthService: Making axios POST request...');
-      // 🔍 CRITICAL: Log the exact data being sent
-      console.log('AuthService: Data being sent to backend:', JSON.stringify(credentials));
-      console.log('AuthService: Credentials object:', credentials);
-      console.log('AuthService: Credentials.email:', credentials.email);
-      console.log('AuthService: Credentials.password:', credentials.password);
-      console.log('AuthService: Credentials.password type:', typeof credentials.password);
-      console.log('AuthService: Credentials.password length:', credentials.password?.length);
+      console.log('AuthService: Attempting login to:', API_ENDPOINTS.AUTH.LOGIN);
+      console.log('AuthService: Credentials:', { email: credentials.email, password: '***' });
       
       const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
       console.log('AuthService: Response status:', response.status);
       console.log('AuthService: Response data:', response.data);
-      console.log('AuthService: Response data type:', typeof response.data);
-      console.log('AuthService: Response data keys:', Object.keys(response.data));
 
       // Extract token and user data
       const token = response.data.accessToken || response.data.token;
@@ -58,9 +48,6 @@ export class AuthService {
 
       console.log('AuthService: Extracted user data:', user);
       console.log('AuthService: Token received:', token ? 'Yes' : 'No');
-      console.log('AuthService: User ID extracted:', user.userId);
-      console.log('AuthService: Email extracted:', user.email);
-      console.log('AuthService: Role extracted:', user.role);
 
       if (!token) {
         console.error('AuthService: No token received');
@@ -94,6 +81,27 @@ export class AuthService {
 
       // Configure axios with new token
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+      // 🔔 AUTOMATIC PUSH TOKEN MANAGEMENT: Generate and register push token on login
+      try {
+        console.log('🔔 DEBUG: AuthService: Managing push notification token on login...');
+        console.log('🔔 DEBUG: AuthService: Importing NotificationService...');
+        const NotificationService = (await import('./NotificationService')).default;
+        console.log('🔔 DEBUG: AuthService: NotificationService imported successfully:', !!NotificationService);
+        
+        console.log('🔔 DEBUG: AuthService: Getting NotificationService instance...');
+        const notificationService = NotificationService.getInstance();
+        console.log('🔔 DEBUG: AuthService: NotificationService instance obtained:', !!notificationService);
+        
+        console.log('🔔 DEBUG: AuthService: Calling notificationService.onUserLogin()...');
+        await notificationService.onUserLogin();
+        console.log('✅ DEBUG: AuthService: Push notification token managed successfully');
+      } catch (notificationError) {
+        console.error('❌ DEBUG: AuthService: Could not manage push notification token:', notificationError);
+        console.error('❌ DEBUG: AuthService: Error details:', notificationError.message);
+        console.error('❌ DEBUG: AuthService: Error stack:', notificationError.stack);
+        // Don't fail login if notification service fails
+      }
 
       // Return success response with backend message
       console.log('=== AuthService.login SUCCESS ===');
@@ -244,6 +252,27 @@ export class AuthService {
    */
   static async logout() {
     try {
+      // 🔔 AUTOMATIC PUSH TOKEN CLEANUP: Deactivate push token before logout
+      try {
+        console.log('🔔 DEBUG: AuthService: Cleaning up push notification token on logout...');
+        console.log('🔔 DEBUG: AuthService: Importing NotificationService for logout...');
+        const NotificationService = (await import('./NotificationService')).default;
+        console.log('🔔 DEBUG: AuthService: NotificationService imported for logout:', !!NotificationService);
+        
+        console.log('🔔 DEBUG: AuthService: Getting NotificationService instance for logout...');
+        const notificationService = NotificationService.getInstance();
+        console.log('🔔 DEBUG: AuthService: NotificationService instance obtained for logout:', !!notificationService);
+        
+        console.log('🔔 DEBUG: AuthService: Calling notificationService.onUserLogout()...');
+        await notificationService.onUserLogout();
+        console.log('✅ DEBUG: AuthService: Push notification token cleaned up successfully');
+      } catch (notificationError) {
+        console.error('❌ DEBUG: AuthService: Could not cleanup push notification token:', notificationError);
+        console.error('❌ DEBUG: AuthService: Logout error details:', notificationError.message);
+        console.error('❌ DEBUG: AuthService: Logout error stack:', notificationError.stack);
+        // Don't fail logout if notification service fails
+      }
+
       const response = await axios.get(API_ENDPOINTS.AUTH.LOGOUT);
       await this.clearSession();
       return {
@@ -314,7 +343,19 @@ export class AuthService {
    */
   static async getCurrentUser() {
     try {
-      const user = await AsyncStorage.getItem(this.SESSION_KEYS.USER);
+      // Try new storage keys first
+      let user = await AsyncStorage.getItem(this.SESSION_KEYS.USER);
+      
+      // If not found, try old storage keys and migrate
+      if (!user) {
+        const oldUser = await AsyncStorage.getItem('crm_user');
+        if (oldUser) {
+          console.log('AuthService: Found user in old storage key, migrating...');
+          await this.migrateOldStorage();
+          user = await AsyncStorage.getItem(this.SESSION_KEYS.USER);
+        }
+      }
+      
       console.log('AuthService.getCurrentUser: Raw user data from storage:', user);
       const parsedUser = user ? JSON.parse(user) : null;
       console.log('AuthService.getCurrentUser: Parsed user data:', parsedUser);
@@ -331,7 +372,19 @@ export class AuthService {
    */
   static async getToken() {
     try {
-      const token = await AsyncStorage.getItem(this.SESSION_KEYS.TOKEN);
+      // Try new storage keys first
+      let token = await AsyncStorage.getItem(this.SESSION_KEYS.TOKEN);
+      
+      // If not found, try old storage keys and migrate
+      if (!token) {
+        const oldToken = await AsyncStorage.getItem('crm_token');
+        if (oldToken) {
+          console.log('AuthService: Found token in old storage key, migrating...');
+          await this.migrateOldStorage();
+          token = await AsyncStorage.getItem(this.SESSION_KEYS.TOKEN);
+        }
+      }
+      
       console.log('AuthService.getToken: Token from storage:', token ? 'Present' : 'Missing');
       return token;
     } catch (error) {
@@ -484,5 +537,39 @@ export class AuthService {
     //   this.refreshInterval = null;
     //   console.log('Session refresh stopped');
     // }
+  }
+
+  /**
+   * Migrate old storage keys to new ones
+   */
+  static async migrateOldStorage() {
+    try {
+      console.log('AuthService: Starting storage migration...');
+      
+      // Get old data
+      const oldUser = await AsyncStorage.getItem('crm_user');
+      const oldToken = await AsyncStorage.getItem('crm_token');
+      
+      if (oldUser && oldToken) {
+        console.log('AuthService: Found old storage data, migrating...');
+        
+        // Save to new keys
+        await AsyncStorage.setItem(this.SESSION_KEYS.USER, oldUser);
+        await AsyncStorage.setItem(this.SESSION_KEYS.TOKEN, oldToken);
+        
+        // Clear old keys
+        await AsyncStorage.removeItem('crm_user');
+        await AsyncStorage.removeItem('crm_token');
+        
+        console.log('AuthService: Storage migration completed successfully');
+        return true;
+      } else {
+        console.log('AuthService: No old storage data found to migrate');
+        return false;
+      }
+    } catch (error) {
+      console.error('AuthService: Storage migration failed:', error);
+      return false;
+    }
   }
 }

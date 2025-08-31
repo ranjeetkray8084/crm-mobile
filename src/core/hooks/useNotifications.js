@@ -1,5 +1,5 @@
 // Notifications Hook - Refactored for Web & Mobile
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NotificationService } from '../services/notification.service';
 import { customAlert } from '../utils/alertUtils'; // Assuming this utility exists
 

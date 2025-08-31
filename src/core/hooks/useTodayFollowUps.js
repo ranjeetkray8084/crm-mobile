@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { FollowUpService } from '../services/followup.service';
 
 export const useTodayFollowUps = (companyId) => {
@@ -25,12 +25,17 @@ export const useTodayFollowUps = (companyId) => {
 
     try {
       const result = await FollowUpService.getTodayFollowUps(currentCompanyId);
+      console.log('📞 useTodayFollowUps: API result:', result);
+      
       if (result.success) {
+        console.log('📞 useTodayFollowUps: Setting follow-ups:', result.data);
         setTodayFollowUps(result.data);
       } else {
+        console.log('📞 useTodayFollowUps: Error:', result.error);
         setError(result.error);
       }
     } catch (err) {
+      console.error('📞 useTodayFollowUps: Exception:', err);
       setError('Failed to load today\'s follow-ups');
     } finally {
       setLoading(false);

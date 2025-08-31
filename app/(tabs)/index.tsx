@@ -8,7 +8,7 @@ import TabScreenWrapper from '../../src/components/common/TabScreenWrapper';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { logout } = useAuth();
+  const auth = useAuth();
 
   const handleMenuPress = () => {
     // Handle menu button press
@@ -22,11 +22,18 @@ export default function DashboardScreen() {
 
   const handleLogoutPress = async () => {
     try {
-      await logout();
-      router.replace('/login');
+      if (auth && auth.logout) {
+        await auth.logout();
+        router.replace('/login');
+      } else {
+        console.warn('Logout function not available');
+        router.replace('/login');
+      }
     } catch (error) {
       console.error('Logout error:', error);
       Alert.alert('Error', 'Failed to logout. Please try again.');
+      // Force navigation to login even if logout fails
+      router.replace('/login');
     }
   };
 

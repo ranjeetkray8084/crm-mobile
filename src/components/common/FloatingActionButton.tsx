@@ -45,6 +45,9 @@ export default function FloatingActionButton({ onAddAction }: FloatingActionButt
   const getAddOptions = (): AddOption[] => {
     const userRole = user?.role?.toUpperCase() || 'USER';
     
+    console.log('FloatingActionButton: User role:', userRole);
+    console.log('FloatingActionButton: Full user object:', user);
+    
     switch (userRole) {
       case 'ADMIN':
         return [
@@ -69,6 +72,7 @@ export default function FloatingActionButton({ onAddAction }: FloatingActionButt
           { id: 'Task', label: 'Calling Data', icon: 'call', color: '#ef4444' },
         ];
       default:
+        console.log('FloatingActionButton: Using default options for role:', userRole);
         return [
           { id: 'Lead', label: 'Lead', icon: 'people', color: '#10b981' },
           { id: 'Properties', label: 'Properties', icon: 'business', color: '#f59e0b' },
@@ -197,7 +201,7 @@ export default function FloatingActionButton({ onAddAction }: FloatingActionButt
           ]}
         >
           <View style={styles.dropdownHeader}>
-            <Text style={styles.dropdownTitle}>Quick Add</Text>
+            <Text style={styles.dropdownTitle}>Add Options</Text>
           </View>
           
           {addOptions.map((option, index) => (

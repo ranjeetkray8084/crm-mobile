@@ -66,9 +66,16 @@ const AddRemarkModal: React.FC<AddRemarkModalProps> = ({
 
       if (result && result.success) {
         console.log('AddRemarkModal: Remark submitted successfully');
-        // Reset form and close modal on success
-        setRemark('');
-        onClose();
+        // Show success message before closing
+        Alert.alert(
+          '✅ Success!',
+          'Remark added successfully!',
+          [{ text: 'OK', onPress: () => {
+            // Reset form and close modal on success
+            setRemark('');
+            onClose();
+          }}]
+        );
       } else {
         const errorMessage = result?.error || 'Failed to add remark';
         console.error('AddRemarkModal: Remark submission failed:', errorMessage);

@@ -72,6 +72,19 @@ const LeadToolbar: React.FC<LeadToolbarProps> = ({
             </TouchableOpacity>
           )}
         </View>
+        
+        {/* Search Button */}
+        {/* <TouchableOpacity 
+          style={[styles.searchButton, searchTerm.trim().length > 0 && styles.searchButtonActive]}
+          onPress={handleSearchSubmit}
+          disabled={!searchTerm.trim()}
+        >
+          <Ionicons 
+            name="search" 
+            size={18} 
+            color={searchTerm.trim().length > 0 ? "#ffffff" : "#9ca3af"} 
+          /> */}
+        {/* </TouchableOpacity> */}
         <TouchableOpacity style={styles.iconButton} onPress={onExport}>
             <Ionicons name="download-outline" size={20} color="#6b7280" />
           </TouchableOpacity>
@@ -228,6 +241,17 @@ const styles = StyleSheet.create({
   },
   clearSearchButton: {
     padding: 4,
+  },
+  searchButton: {
+    padding: 10,
+    backgroundColor: '#3b82f6',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+  },
+  searchButtonActive: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
   },
   filterToggleButton: {
     padding: 12,

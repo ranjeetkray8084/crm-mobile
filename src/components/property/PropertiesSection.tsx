@@ -9,6 +9,7 @@ import PropertyFilters from './PropertyFilters';
 import PropertiesList from './PropertiesList';
 import SearchResultsSummary from './SearchResultsSummary';
 
+
 import UpdatePropertyModal from './modals/UpdatePropertyModal';
 import AddRemarkModal from './modals/AddRemarkModal';
 import PropertyRemarksModal from './modals/PropertyRemarksModal';
@@ -26,6 +27,8 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
 }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [autoSearch] = useState(true); // Same as crm-frontend
   
   // Modal states
   const [editingProperty, setEditingProperty] = useState<any>(null);
@@ -40,9 +43,11 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
     clearAll, clearSearch, applySearch
   } = usePropertySearch();
 
+  const pageSize = 10;
+  
   // Properties hook
   const {
-    properties, loading, error, fetchProperties, updateProperty, deleteProperty, addRemark, getRemarks
+    properties, loading, error, pagination, loadProperties, searchProperties, updateProperty, deleteProperty, addRemark, getRemarks
   } = useProperties(companyId, userId, userRole);
 
   // Users hook for filters
@@ -56,41 +61,47 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
   // Clear all filters and search
   const handleClearAll = useCallback(() => {
     clearAll();
+    setCurrentPage(0);
     // Force reload of original data after clearing
     setTimeout(() => {
-      fetchProperties();
+      loadProperties(0, pageSize);
     }, 0);
-  }, [clearAll, fetchProperties]);
+  }, [clearAll, loadProperties, pageSize]);
 
-  // Initial load
+  // Initial load and page changes
   useEffect(() => {
-    if (companyId) {
-      fetchProperties();
+    if (!companyId) {
+      return;
     }
-  }, [companyId, refreshKey, fetchProperties]);
+    
+    loadProperties(currentPage, pageSize);
+  }, [companyId, currentPage, refreshKey, loadProperties, pageSize]);
 
-  // Handle search when search params change
+  // Handle search when search params change or search is triggered
   useEffect(() => {
     if (!companyId) return;
     
     if (isSearchActive && activeSearchParams) {
-      // For now, we'll use the existing fetchProperties
-      // In a full implementation, you'd call a search function
-      fetchProperties();
+      // Use searchProperties for search queries
+      console.log('🔍 Searching properties with params:', activeSearchParams);
+      searchProperties(activeSearchParams, currentPage, pageSize);
     } else if (!isSearchActive) {
-      fetchProperties();
+      // When search becomes inactive (cleared), reload original data
+      console.log('📋 Loading properties without search');
+      loadProperties(currentPage, pageSize);
     }
-  }, [companyId, isSearchActive, activeSearchParams, searchTrigger, fetchProperties]);
+  }, [companyId, isSearchActive, activeSearchParams, currentPage, searchProperties, searchTrigger, loadProperties, pageSize]);
 
-  // Auto-search when filters change
+  // Auto-search when filters change (if autoSearch is enabled) - same as crm-frontend
   useEffect(() => {
-    if (companyId && hasActiveFilters) {
+    if (autoSearch && companyId && hasActiveFilters) {
+      setCurrentPage(0); // Reset to first page when filters change
       const timeoutId = setTimeout(() => {
         applySearch();
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [companyId, filters, hasActiveFilters, applySearch]);
+  }, [autoSearch, companyId, filters, hasActiveFilters, applySearch]);
 
   // Manual search trigger
   const handleManualSearch = useCallback(() => {
@@ -218,32 +229,42 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
     setShowFilters(!showFilters);
   };
 
+  const actionHandlers = {
+    onStatusChange: handleStatusUpdate,
+    onDelete: handleDeleteProperty,
+    onUpdate: handleUpdateProperty,
+    onAddRemark: handleAddRemark,
+    onViewRemarks: handleViewRemarks,
+    onOutOfBox: handleOutOfBox,
+    companyId: companyId
+  };
+
   return (
     <View style={styles.container}>
-              <PropertyToolbar
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          onSearchEnter={handleSearchEnter}
-          searchTags={searchTags}
-          onRemoveSearchTag={removeSearchTag}
-          onClearSearch={clearSearch}
-          onClearFilters={clearAll}
-          hasActiveFilters={hasActiveFilters}
-          onToggleFilters={toggleFilters}
-          onExport={handleExport}
-          propertiesCount={properties.length}
-          isSearchActive={isSearchActive}
-        />
+      <PropertyToolbar
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onSearchEnter={handleSearchEnter}
+        searchTags={searchTags}
+        onRemoveSearchTag={removeSearchTag}
+        onClearSearch={clearSearch}
+        onClearFilters={handleClearAll}
+        hasActiveFilters={hasActiveFilters}
+        onToggleFilters={toggleFilters}
+        isSearchActive={isSearchActive}
+        onExport={handleExport}
+      />
 
-      {showFilters && (
-        <PropertyFilters
-          filters={filters}
-          onUpdateFilter={updateFilter}
-          onClearFilters={clearAll}
-          availableUsers={filterUsers || []}
-          currentUserId={userId}
-        />
-      )}
+        {/* Desktop Filters - Always visible on mobile */}
+        {showFilters && (
+          <PropertyFilters
+            filters={filters}
+            onUpdateFilter={updateFilter}
+            onClearFilters={handleClearAll}
+            availableUsers={filterUsers || []}
+            currentUserId={userId}
+          />
+        )}
 
       {isSearchActive && (
         <SearchResultsSummary
@@ -251,7 +272,7 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
           resultsCount={properties.length}
           onClearAll={handleClearAll}
           getActiveFiltersSummary={getActiveFiltersSummary}
-          currentUserId={userId}
+          currentUserId={userId || undefined}
           availableUsers={filterUsers || []}
         />
       )}
@@ -268,9 +289,10 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
         onViewRemarks={handleViewRemarks}
         onOutOfBox={handleOutOfBox}
         companyId={companyId}
+        currentPage={currentPage}
+        pagination={pagination}
+        onPageChange={setCurrentPage}
       />
-
-
 
       {/* MODALS */}
       <UpdatePropertyModal

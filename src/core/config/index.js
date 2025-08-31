@@ -2,7 +2,7 @@
 export const config = {
   // API Configuration
   api: {
-    baseURL: import.meta.env.VITE_API_BASE_URL || process.env.REACT_APP_API_URL || 'http://localhost:8082',
+    baseURL: import.meta.env.VITE_API_BASE_URL || process.env.REACT_APP_API_URL || 'https://backend.leadstracker.in',
     timeout: 30000,
     retries: 3
   },
@@ -62,7 +62,7 @@ export const config = {
 export const environments = {
   development: {
     api: {
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8082'
+      baseURL: import.meta.env.VITE_API_BASE_URL || 'https://backend.leadstracker.in'
     },
     debug: true
   },
@@ -76,7 +76,7 @@ export const environments = {
   
   mobile: {
     api: {
-      baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8082'
+      baseURL: import.meta.env.VITE_API_BASE_URL || 'https://backend.leadstracker.in'
     },
     storage: {
       // Use AsyncStorage for React Native

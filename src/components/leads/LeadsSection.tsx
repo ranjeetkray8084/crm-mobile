@@ -43,7 +43,7 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: null
+    onConfirm: null as (() => void) | null
   });
   const [showAddLeadForm, setShowAddLeadForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -54,7 +54,7 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
     searchTerm, searchTags, filters, isSearchActive, activeSearchParams,
     hasActiveFilters, searchParams, getActiveFiltersSummary, setSearchTerm,
     removeSearchTag, handleSearchEnter, updateFilter,
-    clearAll, clearSearch, applySearch
+    clearAll, clearSearch, applySearch, setActiveSearchParams, setIsSearchActive
   } = useLeadSearch();
 
   const {
@@ -69,6 +69,12 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
     setRefreshKey(prevKey => prevKey + 1);
   }, []);
 
+  // Handle page changes while maintaining search state
+  const handlePageChange = useCallback((newPage: number) => {
+    console.log('📄 Page change requested:', newPage, 'Current search state:', { isSearchActive, activeSearchParams });
+    setCurrentPage(newPage);
+  }, [isSearchActive, activeSearchParams]);
+
   // Clear all filters and search
   const handleClearAll = useCallback(() => {
     clearAll();
@@ -81,21 +87,37 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
   useEffect(() => {
     if (!companyId) return;
     if (isSearchActive && activeSearchParams) {
+      console.log('🔍 Searching leads with params:', activeSearchParams, 'page:', currentPage);
       searchLeads(activeSearchParams, currentPage, pageSize);
     } else {
+      console.log('📋 Loading leads without search, page:', currentPage);
       loadLeads(currentPage, pageSize);
     }
   }, [companyId, currentPage, isSearchActive, activeSearchParams, refreshKey, searchLeads, loadLeads, pageSize]);
 
-  // Auto-search when filters change
+  // Reset page when filters change (search is handled by useLeadSearch hook)
   useEffect(() => {
     if (companyId && hasActiveFilters) {
-      const timeoutId = setTimeout(() => {
-        applySearch();
-      }, 500);
-      return () => clearTimeout(timeoutId);
+      setCurrentPage(0); // Reset to first page when filters change
     }
-  }, [companyId, filters, hasActiveFilters, applySearch]);
+  }, [companyId, hasActiveFilters]);
+
+  // Reset page when search changes (search is handled by useLeadSearch hook)
+  useEffect(() => {
+    if (companyId && (searchTerm.trim() || searchTags.length > 0)) {
+      setCurrentPage(0); // Reset to first page when search changes
+    }
+  }, [companyId, searchTerm, searchTags.length]);
+
+  // Clear search when all search terms and filters are removed
+  useEffect(() => {
+    if (companyId && !hasActiveFilters) {
+      console.log('🔍 Clearing search state - no active filters or search terms');
+      setActiveSearchParams(null);
+      setIsSearchActive(false);
+      setCurrentPage(0);
+    }
+  }, [companyId, hasActiveFilters]);
 
   // Manual search trigger
   const handleManualSearch = useCallback(() => {
@@ -118,9 +140,46 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
   const handleConfirmAddRemark = async (remarkData: any) => {
     if (!remarkingLead) return;
     const leadId = remarkingLead.id || remarkingLead.leadId;
-    await addRemark(leadId, remarkData);
-    setRemarkingLead(null);
-    handleRefresh();
+    
+    try {
+      const result = await addRemark(leadId, remarkData);
+      
+      if (result && result.success) {
+        setRemarkingLead(null);
+        handleRefresh();
+        return result; // Return the result so the modal can handle it properly
+      } else {
+        // Show error to user
+        const errorMsg = result?.error || 'Failed to add remark';
+        Alert.alert('Error', errorMsg, [{ text: 'OK' }]);
+        return result; // Return the result even if it failed
+      }
+    } catch (error: any) {
+      console.error('Error adding remark:', error);
+      
+      // Show authentication error to user
+      if (error.message && error.message.includes('Authentication failed')) {
+        Alert.alert(
+          'Authentication Error',
+          'Your session has expired. Please login again to continue.',
+          [
+            { text: 'OK', onPress: () => {
+              // You can add navigation to login here if needed
+              console.log('User needs to login again');
+            }}
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to add remark. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+      
+      // Return error result for the modal
+      return { success: false, error: error.message || 'Failed to add remark' };
+    }
   };
 
   const handleGetRemarks = (lead: Lead) => setViewingRemarksLead(lead);
@@ -129,16 +188,66 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
 
   const handleViewFollowUps = (lead: Lead) => setViewFollowUpsLead(lead);
 
-  const handleConfirmAddFollowUp = async (followUpData: any) => {
-    if (!followUpLead) return;
+  const handleConfirmAddFollowUp = async (followUpData: any): Promise<{ success: boolean; data?: any; error?: string }> => {
+    if (!followUpLead) {
+      return { success: false, error: 'No lead selected' };
+    }
+    
     const leadId = followUpLead.id || followUpLead.leadId;
     
     try {
-      await addFollowUp(leadId, followUpData);
-      setFollowUpLead(null);
-      handleRefresh();
-    } catch (error) {
-      console.error('Error adding follow-up:', error);
+      const result = await addFollowUp(leadId, followUpData);
+      
+      // Type guard to ensure result has the expected structure
+      if (result && typeof result === 'object' && 'success' in result) {
+        if (result.success) {
+          // Success - close modal and refresh
+          setFollowUpLead(null);
+          handleRefresh();
+          return result;
+        } else {
+          // Error from the hook
+          const errorMsg = result.error || 'Failed to add follow-up';
+          console.error('Error adding follow-up:', errorMsg);
+          
+          // Show error to user
+          Alert.alert('Error', errorMsg, [{ text: 'OK' }]);
+          
+          // Return error result for the modal
+          return { success: false, error: errorMsg };
+        }
+      } else {
+        // Unexpected result format
+        const errorMsg = 'Unexpected response format from server';
+        console.error('Unexpected result format:', result);
+        Alert.alert('Error', errorMsg, [{ text: 'OK' }]);
+        return { success: false, error: errorMsg };
+      }
+    } catch (error: any) {
+      console.error('Unexpected error adding follow-up:', error);
+      
+      // Show authentication error to user
+      if (error.message && error.message.includes('Authentication failed')) {
+        Alert.alert(
+          'Authentication Error',
+          'Your session has expired. Please login again to continue.',
+          [
+            { text: 'OK', onPress: () => {
+              // You can add navigation to login here if needed
+              console.log('User needs to login again');
+            }}
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          error.message || 'Failed to add follow-up. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+      
+      // Return error result for the modal
+      return { success: false, error: error.message || 'Failed to add follow-up' };
     }
   };
 
@@ -167,7 +276,7 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
       'Unassign Lead',
       'Are you sure you want to unassign this lead?',
       async () => {
-        await unassignLead(leadId, userId);
+        await unassignLead(leadId);
         handleRefresh();
       }
     );
@@ -218,7 +327,7 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
     onViewRemarks: handleGetRemarks,
     onAddFollowUp: handleAddFollowUp,
     onViewFollowUps: handleViewFollowUps,
-    companyId: companyId
+    companyId: companyId || ''
   };
 
   return (
@@ -276,9 +385,14 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
             searchTerm={searchTerm} 
             refreshing={loading}
             onRefresh={handleRefresh}
+            currentPage={currentPage}
+            pagination={pagination}
+            onPageChange={handlePageChange}
             {...actionHandlers} 
           />
         )}
+
+        {/* Pagination Controls - Removed as it's now part of LeadsList */}
       </View>
 
      

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface PropertyToolbarProps {
@@ -12,9 +12,8 @@ interface PropertyToolbarProps {
   onClearFilters: () => void;
   hasActiveFilters: boolean;
   onToggleFilters: () => void;
-  onExport: () => void;
-  propertiesCount: number;
   isSearchActive: boolean;
+  onExport: () => void;
 }
 
 const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
@@ -27,11 +26,9 @@ const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
   onClearFilters,
   hasActiveFilters,
   onToggleFilters,
-  onExport,
-  propertiesCount,
-  isSearchActive
+  isSearchActive,
+  onExport
 }) => {
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const handleSearchSubmit = () => {
     if (searchTerm.trim()) {
@@ -39,27 +36,19 @@ const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
     }
   };
 
-  const handleClearAll = () => {
-    onClearSearch();
-    onClearFilters();
-  };
-
   return (
     <View style={styles.container}>
-
-      {/* Search Section */}
       <View style={styles.searchSection}>
+        {/* Single Search Input */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search properties by name, location, type..."
+            placeholder="Search properties..."
             placeholderTextColor="#9ca3af"
             value={searchTerm}
             onChangeText={onSearchChange}
             onSubmitEditing={handleSearchSubmit}
-            onFocus={() => setIsSearchFocused(true)}
-            onBlur={() => setIsSearchFocused(false)}
             returnKeyType="search"
           />
           {searchTerm.length > 0 && (
@@ -68,10 +57,8 @@ const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.iconButton} onPress={onExport}>
-            <Ionicons name="download-outline" size={20} color="#6b7280" />
-          </TouchableOpacity>
         
+        {/* Filter Button */}
         <TouchableOpacity 
           style={[styles.filterToggleButton, hasActiveFilters && styles.filterToggleButtonActive]}
           onPress={onToggleFilters}
@@ -81,11 +68,18 @@ const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
             size={18} 
             color={hasActiveFilters ? "#ffffff" : "#6b7280"} 
           />
-          {hasActiveFilters && (
-            <View style={styles.activeFilterIndicator}>
-              <Text style={styles.activeFilterText}>!</Text>
-            </View>
-          )}
+        </TouchableOpacity>
+
+        {/* Export Button */}
+        <TouchableOpacity 
+          style={styles.exportButton}
+          onPress={onExport}
+        >
+          <Ionicons 
+            name="download-outline" 
+            size={18} 
+            color="#6b7280" 
+          />
         </TouchableOpacity>
       </View>
 
@@ -111,16 +105,6 @@ const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
           </View>
         </View>
       )}
-
-      {/* Active Filters Summary */}
-      {hasActiveFilters && (
-        <View style={styles.activeFiltersContainer}>
-          <Text style={styles.activeFiltersLabel}>Active filters:</Text>
-          <TouchableOpacity onPress={onClearFilters} style={styles.clearFiltersButton}>
-            <Text style={styles.clearFiltersText}>Clear filters</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 };
@@ -135,53 +119,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  titleSection: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3b82f6',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 8,
-  },
-  actionButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  iconButton: {
-    padding: 10,
-    backgroundColor: '#f8fafc',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
   searchSection: {
     flexDirection: 'row',
@@ -222,22 +159,6 @@ const styles = StyleSheet.create({
   filterToggleButtonActive: {
     backgroundColor: '#3b82f6',
     borderColor: '#3b82f6',
-  },
-  activeFilterIndicator: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#ef4444',
-    borderRadius: 8,
-    width: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  activeFilterText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '700',
   },
   searchTagsContainer: {
     paddingHorizontal: 16,
@@ -283,30 +204,13 @@ const styles = StyleSheet.create({
     color: '#ef4444',
     fontWeight: '500',
   },
-  activeFiltersContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#fef3c7',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-  },
-  activeFiltersLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#92400e',
-  },
-  clearFiltersButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#fbbf24',
-    borderRadius: 6,
-  },
-  clearFiltersText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#92400e',
+  exportButton: {
+    padding: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    position: 'relative',
   },
 });
 

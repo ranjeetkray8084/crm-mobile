@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Action {
@@ -17,8 +17,6 @@ interface ThreeDotMenuProps {
 
 const ThreeDotMenu: React.FC<ThreeDotMenuProps> = ({ item, actions, position = 'right-0' }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const buttonRef = useRef<TouchableOpacity>(null);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -36,7 +34,6 @@ const ThreeDotMenu: React.FC<ThreeDotMenuProps> = ({ item, actions, position = '
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        ref={buttonRef}
         onPress={handleToggle}
         style={styles.button}
         activeOpacity={0.7}
@@ -55,7 +52,7 @@ const ThreeDotMenu: React.FC<ThreeDotMenuProps> = ({ item, actions, position = '
           activeOpacity={1}
           onPress={closeMenu}
         >
-          <View style={[styles.menu, { top: menuPosition.y, right: menuPosition.x }]}>
+          <View style={styles.menu}>
             {actions.map((action, index) => (
               <TouchableOpacity
                 key={index}
@@ -98,15 +95,15 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   menu: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
     backgroundColor: '#ffffff',
     borderRadius: 12,
     paddingVertical: 8,
-    minWidth: 180,
+    minWidth: 200,
+    maxWidth: 280,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,

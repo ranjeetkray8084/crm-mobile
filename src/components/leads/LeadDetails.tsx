@@ -26,6 +26,7 @@ interface Lead {
     name: string;
   };
   createdByName?: string;
+  referenceName?: string; // Added for reference source
 }
 
 interface LeadDetailsProps {
@@ -92,6 +93,12 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({
 
   const formatSource = (source: string) => {
     if (!source || source.trim() === '') return 'N/A';
+    
+    // Special handling for REFERENCE source to show reference name
+    if (source === 'REFERENCE' && lead.referenceName && typeof lead.referenceName === 'string' && lead.referenceName.trim()) {
+      return `Reference: ${lead.referenceName.trim()}`;
+    }
+    
     const sourceMap: { [key: string]: string } = {
       "INSTAGRAM": "Instagram",
       "FACEBOOK": "Facebook",

@@ -1,5 +1,5 @@
 // useDashboard Hook - Reusable for Web & Mobile
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DashboardService } from '../services';
 
 export const useDashboard = (companyId, userId) => {

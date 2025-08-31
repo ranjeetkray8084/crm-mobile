@@ -1,7 +1,16 @@
 // src/legacy/api/axios.js - Mobile-optimized version
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
 import Constants from 'expo-constants';
+
+// Safely import expo-network with fallback
+let Network;
+try {
+  Network = require('expo-network');
+} catch (error) {
+  console.warn('expo-network not available:', error.message);
+  Network = null;
+}
 
 // Get API base URL from environment or use default
 const getApiBaseUrl = () => {
@@ -11,10 +20,42 @@ const getApiBaseUrl = () => {
     return Constants.expoConfig.extra.apiBaseUrl;
   }
   
+  // Try to get from local config
+  try {
+    const { getApiBaseUrl: getLocalApiUrl } = require('../../core/config/api.config');
+    const localUrl = getLocalApiUrl();
+    if (localUrl) {
+      console.log('Using API base URL from local config:', localUrl);
+      return localUrl;
+    }
+  } catch (error) {
+    console.log('Local config not available, using fallback');
+  }
+  
   // Fallback to environment variable or default
-  const fallbackUrl = process.env.API_BASE_URL || 'http://192.168.1.26:8082';
+  const fallbackUrl = process.env.API_BASE_URL || 'https://backend.leadstracker.in';
   console.log('Using fallback API base URL:', fallbackUrl);
   return fallbackUrl;
+};
+
+// Check network connectivity with fallback
+const checkNetworkConnectivity = async () => {
+  try {
+    // Try to use expo-network if available
+    if (Network && typeof Network.getNetworkStateAsync === 'function') {
+      const networkState = await Network.getNetworkStateAsync();
+      console.log('Network state:', networkState);
+      return networkState.isConnected && networkState.isInternetReachable;
+    }
+    
+    // Fallback: assume connected if expo-network is not available
+    console.log('expo-network not available, assuming network is connected');
+    return true;
+  } catch (error) {
+    console.warn('Failed to check network state:', error);
+    // Assume connected if check fails to avoid blocking requests
+    return true;
+  }
 };
 
 // Create axios instance with base configuration
@@ -25,18 +66,30 @@ const axiosInstance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  // Add retry configuration
+  retry: 3,
+  retryDelay: 1000,
 });
 
 // ✅ Enhanced request interceptor with security measures
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
+      // Check network connectivity first
+      const isConnected = await checkNetworkConnectivity();
+      if (!isConnected) {
+        throw new Error('No network connectivity');
+      }
+
       console.log('Making request to:', config.baseURL + config.url);
       
-      // Add authentication token if available
-      const token = await AsyncStorage.getItem('crm_token');
+      // Add authentication token if available - use same key as web version
+      const token = await AsyncStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log('🔐 Token found and added to request');
+      } else {
+        console.log('⚠️ No authentication token found');
       }
 
       // Add security headers
@@ -86,6 +139,19 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   async (error) => {
+    // Enhanced error handling with network diagnostics
+    if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+      console.error('Network Error Details:', {
+        message: error.message,
+        code: error.code,
+        config: error.config,
+        isNetworkConnected: await checkNetworkConnectivity()
+      });
+      
+      // Provide more helpful error message
+      error.message = 'Network connection failed. Please check your internet connection and try again.';
+    }
+    
     // Enhanced error handling with security
     if (error.response?.status === 401) {
       const isAuthEndpoint = error.config?.url?.includes('/api/auth/');

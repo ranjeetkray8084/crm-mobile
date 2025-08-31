@@ -1,5 +1,5 @@
 // Companies Hook - Modern implementation
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CompanyService } from '../services/company.service';
 import { customAlert } from '../utils/alertUtils';
 

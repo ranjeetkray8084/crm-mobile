@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../src/shared/contexts/AuthContext';
 import Logo from '../src/components/common/Logo';
 
+
 export default function LoginScreen() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -36,11 +37,15 @@ export default function LoginScreen() {
     setFormData({ ...formData, [field]: value });
   };
 
+
+
   const handleLogin = async () => {
     if (!formData.email || !formData.password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+
+
 
     // 🔍 DEBUG: Check formData before login
     console.log('=== LOGIN DEBUG ===');
@@ -98,8 +103,8 @@ export default function LoginScreen() {
         errorMessage = 'Cannot connect to server. Please check if the backend is running.';
       }
       
+      Alert.alert('Login Error', errorMessage);
       setBackendMessage(errorMessage);
-      Alert.alert('Error', errorMessage);
     } finally {
       setIsLoading(false);
     }

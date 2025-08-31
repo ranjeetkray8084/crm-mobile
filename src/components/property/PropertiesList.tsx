@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import PropertyCard from './PropertyCard';
+import Pagination from './Pagination';
 
 interface Property {
   id?: number;
@@ -42,6 +43,14 @@ interface PropertiesListProps {
   onViewRemarks?: (property: Property) => void;
   onOutOfBox?: (property: Property) => void;
   companyId?: number;
+  // Add pagination props
+  currentPage?: number;
+  pagination?: {
+    totalPages: number;
+    totalElements: number;
+    size: number;
+  };
+  onPageChange?: (page: number) => void;
 }
 
 const PropertiesList: React.FC<PropertiesListProps> = ({
@@ -55,7 +64,10 @@ const PropertiesList: React.FC<PropertiesListProps> = ({
   onAddRemark,
   onViewRemarks,
   onOutOfBox,
-  companyId
+  companyId,
+  currentPage = 0,
+  pagination,
+  onPageChange
 }) => {
   const renderPropertyCard = ({ item }: { item: Property }) => (
     <PropertyCard
@@ -69,6 +81,19 @@ const PropertiesList: React.FC<PropertiesListProps> = ({
       companyId={companyId}
     />
   );
+
+  // Render pagination as footer
+  const renderPaginationFooter = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    
+    return (
+      <Pagination
+        currentPage={currentPage}
+        pagination={pagination}
+        onPageChange={onPageChange || (() => {})}
+      />
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
@@ -109,7 +134,7 @@ const PropertiesList: React.FC<PropertiesListProps> = ({
           tintColor="#3b82f6"
         />
       }
-     
+      ListFooterComponent={renderPaginationFooter}
     />
   );
 };

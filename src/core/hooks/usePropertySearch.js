@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 
 export const usePropertySearch = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -110,7 +110,7 @@ export const usePropertySearch = () => {
     setSearchTrigger(prev => prev + 1);
   }, []);
 
-  const getActiveFiltersSummary = useCallback((currentUserId = null, availableUsers = []) => {
+  const getActiveFiltersSummary = useCallback((currentUserId = undefined, availableUsers = []) => {
     const activeFilters = [];
 
     if (searchTags.length > 0) {

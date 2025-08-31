@@ -44,36 +44,56 @@ const PropertyFilters: React.FC<PropertyFiltersProps> = ({
   ];
 
   const typeOptions = [
-    'Apartment', 'Villa', 'House', 'Plot', 'Commercial', 'Office', 'Shop', 'Land'
+    'Office', 'Retail', 'Residential', 'Plot'
   ];
 
-  const bhkOptions = ['1 BHK', '2 BHK', '3 BHK', '4 BHK', '5+ BHK'];
+  const bhkOptions = ['1', '2', '3', '4'];
 
   const sourceOptions = [
-    'Direct', 'Website', 'Social Media', 'Referral', 'Advertisement', 'Other'
+    'Social Media', 'Cold Call', 'Project Call', 'Reference', 'Broker'
   ];
 
+  // Exact same budget ranges as crm-frontend
   const budgetRanges = [
     '0-500000',
     '500000-1000000',
-    '1000000-2000000',
-    '2000000-5000000',
+    '1000000-1500000',
+    '1500000-2000000',
+    '2000000-2500000',
+    '2500000-3000000',
+    '3000000-3500000',
+    '3500000-4000000',
+    '4000000-4500000',
+    '4500000-5000000',
     '5000000-10000000',
-    '10000000+'
+    '10000000-20000000',
+    '20000000-30000000',
+    '30000000-40000000',
+    '40000000-50000000',
+    '50000000-100000000',
+    '100000000-200000000',
+    '200000000-300000000',
+    '300000000-400000000',
+    '400000000-500000000',
+    '500000000-600000000',
+    '600000000-700000000',
+    '700000000-800000000',
+    '800000000-900000000',
+    '900000000-1000000000'
   ];
 
   const formatBudgetRange = (range: string) => {
     const [min, max] = range.split('-');
-    if (max === '+') {
-      return `₹${(parseInt(min) / 10000000).toFixed(1)} Cr+`;
+    const minNum = parseInt(min);
+    const maxNum = parseInt(max);
+    
+    if (maxNum >= 10000000) {
+      return `₹${(minNum / 10000000).toFixed(1)} Cr - ₹${(maxNum / 10000000).toFixed(1)} Cr`;
     }
-    if (parseInt(max) >= 10000000) {
-      return `₹${(parseInt(min) / 10000000).toFixed(1)} Cr - ₹${(parseInt(max) / 10000000).toFixed(1)} Cr`;
+    if (maxNum >= 100000) {
+      return `₹${(minNum / 100000).toFixed(1)} Lakh - ₹${(maxNum / 100000).toFixed(1)} Lakh`;
     }
-    if (parseInt(max) >= 100000) {
-      return `₹${(parseInt(min) / 100000).toFixed(1)} Lakh - ₹${(parseInt(max) / 100000).toFixed(1)} Lakh`;
-    }
-    return `₹${parseInt(min).toLocaleString()} - ₹${parseInt(max).toLocaleString()}`;
+    return `₹${minNum.toLocaleString()} - ₹${maxNum.toLocaleString()}`;
   };
 
   const FilterSection: React.FC<{
@@ -128,6 +148,21 @@ const PropertyFilters: React.FC<PropertyFiltersProps> = ({
       </View>
 
       <ScrollView style={styles.filtersContainer} showsVerticalScrollIndicator={false}>
+        {/* Budget Filter - First as in crm-frontend */}
+        <FilterSection title="Budget" section="budget">
+          <View style={styles.chipContainer}>
+            {budgetRanges.map(range => (
+              <FilterChip
+                key={range}
+                label={formatBudgetRange(range)}
+                value={range}
+                isSelected={filters.budgetRange === range}
+                onPress={() => onUpdateFilter('budgetRange', filters.budgetRange === range ? '' : range)}
+              />
+            ))}
+          </View>
+        </FilterSection>
+
         {/* Status Filter */}
         <FilterSection title="Status" section="status">
           <View style={styles.chipContainer}>
@@ -144,7 +179,7 @@ const PropertyFilters: React.FC<PropertyFiltersProps> = ({
         </FilterSection>
 
         {/* Type Filter */}
-        <FilterSection title="Property Type" section="type">
+        <FilterSection title="Type" section="type">
           <View style={styles.chipContainer}>
             {typeOptions.map(type => (
               <FilterChip
@@ -164,25 +199,10 @@ const PropertyFilters: React.FC<PropertyFiltersProps> = ({
             {bhkOptions.map(bhk => (
               <FilterChip
                 key={bhk}
-                label={bhk}
+                label={`${bhk} BHK`}
                 value={bhk}
                 isSelected={filters.bhk === bhk}
                 onPress={() => onUpdateFilter('bhk', filters.bhk === bhk ? '' : bhk)}
-              />
-            ))}
-          </View>
-        </FilterSection>
-
-        {/* Budget Range Filter */}
-        <FilterSection title="Budget Range" section="budget">
-          <View style={styles.chipContainer}>
-            {budgetRanges.map(range => (
-              <FilterChip
-                key={range}
-                label={formatBudgetRange(range)}
-                value={range}
-                isSelected={filters.budgetRange === range}
-                onPress={() => onUpdateFilter('budgetRange', filters.budgetRange === range ? '' : range)}
               />
             ))}
           </View>
@@ -212,15 +232,21 @@ const PropertyFilters: React.FC<PropertyFiltersProps> = ({
               isSelected={filters.createdBy === currentUserId?.toString()}
               onPress={() => onUpdateFilter('createdBy', filters.createdBy === currentUserId?.toString() ? '' : (currentUserId?.toString() || ''))}
             />
-            {availableUsers.map(user => (
-              <FilterChip
-                key={user.id || user.userId}
-                label={user.name || user.username || `User ${user.id || user.userId}`}
-                value={(user.id || user.userId)?.toString() || ''}
-                isSelected={filters.createdBy === (user.id || user.userId)?.toString()}
-                onPress={() => onUpdateFilter('createdBy', filters.createdBy === (user.id || user.userId)?.toString() ? '' : (user.id || user.userId)?.toString())}
-              />
-            ))}
+            {availableUsers.map(user => {
+              const userIdValue = user.id || user.userId;
+              const isCurrentUser = currentUserId && (userIdValue?.toString() === currentUserId?.toString());
+              const displayName = isCurrentUser ? 'Me' : (user.name || user.username || `User ${userIdValue}`);
+              
+              return (
+                <FilterChip
+                  key={userIdValue}
+                  label={displayName}
+                  value={userIdValue?.toString() || ''}
+                  isSelected={filters.createdBy === userIdValue?.toString()}
+                  onPress={() => onUpdateFilter('createdBy', filters.createdBy === userIdValue?.toString() ? '' : (userIdValue?.toString() || ''))}
+                />
+              );
+            })}
           </View>
         </FilterSection>
       </ScrollView>

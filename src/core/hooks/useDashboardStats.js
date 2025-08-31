@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DashboardService } from '../services/dashboard.service';
 
 export const useDashboardStats = (companyId, userId, role) => {

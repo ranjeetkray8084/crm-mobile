@@ -2,8 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUsers } from '../../core/hooks/useUsers';
-import { UserService } from '../../core/services/user.service';
-import { CompanyService } from '../../core/services/company.service';
+import { UserService, CompanyService } from '../../core/services';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AddUserFormProps {
@@ -22,8 +21,19 @@ interface Company {
   name: string;
 }
 
+interface FormData {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+  role: string;
+  adminId: string;
+  companyId: string;
+}
+
 const AddUserForm: React.FC<AddUserFormProps> = ({ onSuccess, onCancel }) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
     phone: '',
@@ -53,12 +63,21 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ onSuccess, onCancel }) => {
   useEffect(() => {
     const loadUserInfo = async () => {
       try {
-        const userData = await AsyncStorage.getItem('crm_user');
+        const userData = await AsyncStorage.getItem('user');
+        console.log('AddUserForm: Loading user data from AsyncStorage:', userData);
+        
         if (userData) {
           const user = JSON.parse(userData);
+          console.log('AddUserForm: Parsed user data:', user);
+          console.log('AddUserForm: User companyId:', user.companyId);
+          console.log('AddUserForm: User role:', user.role);
+          
           setCompanyId(user.companyId?.toString() || '');
           setUserId(user.userId?.toString() || user.id?.toString() || '');
           setUserRole(user.role || '');
+          
+          console.log('AddUserForm: Set companyId to:', user.companyId?.toString() || '');
+          console.log('AddUserForm: Set userRole to:', user.role || '');
           
           // Set default role based on current user's role
           if (user.role === 'DEVELOPER') {
@@ -68,6 +87,8 @@ const AddUserForm: React.FC<AddUserFormProps> = ({ onSuccess, onCancel }) => {
           } else if (user.role === 'ADMIN') {
             setFormData(prev => ({ ...prev, role: 'USER' }));
           }
+        } else {
+          console.log('AddUserForm: No user data found in AsyncStorage');
         }
       } catch (error) {
         console.error('Error loading user info:', error);

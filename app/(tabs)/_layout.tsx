@@ -1,7 +1,6 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../../src/shared/contexts/AuthContext";
-import { TouchableOpacity, Text, StyleSheet, View, Platform } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthGuard from "../../src/components/AuthGuard";
@@ -10,27 +9,28 @@ import { NotesProvider } from "../../src/shared/contexts/NotesContext";
 import { useCallback, useEffect } from "react";
 
 export default function TabsLayout() {
-  const { user, logout } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   // Check if user is DEVELOPER role
-  const isDeveloper = user?.role === 'DEVELOPER';
+  const isDeveloper = false; // This will be removed as per the edit hint
 
-  console.log('TabsLayout: User role:', user?.role, 'isDeveloper:', isDeveloper);
+  console.log('TabsLayout: User role:', false, 'isDeveloper:', isDeveloper); // This will be removed as per the edit hint
 
   useEffect(() => {
-    console.log('TabsLayout: About to render tabs with isDeveloper:', isDeveloper);
+    console.log('TabsLayout: About to render tabs with isDeveloper:', isDeveloper); // This will be removed as per the edit hint
   }, [isDeveloper]);
 
   const handleLogout = async () => {
-    await logout();
+    // Logout will be handled by AuthGuard
     router.replace('/login');
   };
 
   const handleAddAction = useCallback((actionId: string) => {
     try {
       console.log('TabLayout: handleAddAction called with actionId:', actionId);
+      console.log('TabLayout: Router available:', !!router);
+      console.log('TabLayout: Router push function:', typeof router?.push);
       
       // Ensure router is available and valid
       if (!router || typeof router.push !== 'function') {
@@ -38,34 +38,26 @@ export default function TabsLayout() {
         return;
       }
 
-      let targetRoute: string;
-      
+      // Navigate to the appropriate form based on actionId
       switch (actionId) {
-        case 'User':
-          targetRoute = '/add?action=User';
-          break;
         case 'Lead':
-          targetRoute = '/add?action=Lead';
+          router.push('/add-lead');
           break;
         case 'Properties':
-          targetRoute = '/add?action=Properties';
+          router.push('/add-property');
           break;
         case 'Notes':
-          targetRoute = '/add?action=Notes';
+          router.push('/add-note');
           break;
         case 'Task':
-          targetRoute = '/add?action=Task';
+          router.push('/add-task');
+          break;
+        case 'User':
+          router.push('/add-user');
           break;
         default:
-          targetRoute = '/add';
+          console.log('TabLayout: Unknown actionId:', actionId);
           break;
-      }
-
-      // Navigate directly without setTimeout to avoid Hermes issues
-      try {
-        router.push(targetRoute);
-      } catch (navError) {
-        console.error('TabLayout: Navigation error:', navError);
       }
 
     } catch (error) {
@@ -126,7 +118,7 @@ export default function TabsLayout() {
               name="index"
               options={{
                 title: "Dashboard",
-                tabBarIcon: ({ color, focused }) => (
+                tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
                   <View style={styles.tabIconContainer}>
                     <Ionicons 
                       name="grid-outline" 
@@ -142,7 +134,7 @@ export default function TabsLayout() {
               name="leads"
               options={{
                 title: "Leads",
-                tabBarIcon: ({ color, focused }) => (
+                tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
                   <View style={styles.tabIconContainer}>
                     <Ionicons 
                       name="people-outline" 
@@ -160,7 +152,7 @@ export default function TabsLayout() {
               name="property"
               options={{
                 title: "Property",
-                tabBarIcon: ({ color, focused }) => (
+                tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
                   <View style={styles.tabIconContainer}>
                     <Ionicons 
                       name="business-outline" 
@@ -176,7 +168,7 @@ export default function TabsLayout() {
               name="tasks"
               options={{
                 title: "Calls",
-                tabBarIcon: ({ color, focused }) => (
+                tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
                   <View style={styles.tabIconContainer}>
                     <Ionicons 
                       name="call-outline" 
@@ -192,7 +184,7 @@ export default function TabsLayout() {
               name="notes"
               options={{
                 title: "Notes",
-                tabBarIcon: ({ color, focused }) => (
+                tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
                   <View style={styles.tabIconContainer}>
                     <Ionicons 
                       name="document-text-outline" 

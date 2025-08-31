@@ -1,5 +1,5 @@
 // useLeads Hook - Mobile-optimized version for React Native/Expo
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LeadService } from '../services/lead.service';
 import { FollowUpService } from '../services/followup.service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,17 +15,46 @@ export const useLeads = (companyId, userId, userRole) => {
     totalPages: 0,
   });
 
-  // Get user info from AsyncStorage
+  // Get user info from AsyncStorage - use same keys as web version
   const getUserInfo = useCallback(async () => {
     try {
-      const userData = await AsyncStorage.getItem('crm_user');
-      const tokenData = await AsyncStorage.getItem('crm_token');
+      // Use same storage keys as web version
+      let userData = await AsyncStorage.getItem('user');
+      let tokenData = await AsyncStorage.getItem('token');
+      
+      // If not found, try to migrate from old keys
+      if (!userData || !tokenData) {
+        console.log('🔍 Trying to migrate from old storage keys...');
+        const oldUserData = await AsyncStorage.getItem('crm_user');
+        const oldTokenData = await AsyncStorage.getItem('crm_token');
+        
+        if (oldUserData && oldTokenData) {
+          console.log('🔍 Found old storage data, migrating...');
+          // Migrate to new keys
+          await AsyncStorage.setItem('user', oldUserData);
+          await AsyncStorage.setItem('token', oldTokenData);
+          // Clear old keys
+          await AsyncStorage.removeItem('crm_user');
+          await AsyncStorage.removeItem('crm_token');
+          
+          userData = oldUserData;
+          tokenData = oldTokenData;
+          console.log('🔍 Migration completed');
+        }
+      }
+      
+      console.log('🔍 Storage keys checked:');
+      console.log('🔍 user:', userData ? 'found' : 'not found');
+      console.log('🔍 token:', tokenData ? 'found' : 'not found');
       
       if (!userData || !tokenData) {
+        console.warn('❌ Missing user data or token');
         return null;
       }
       
       const user = JSON.parse(userData);
+      console.log('🔍 Parsed user data:', user);
+      
       return {
         companyId: companyId || user.companyId,
         userId: userId || user.userId || user.id,
@@ -46,21 +75,35 @@ export const useLeads = (companyId, userId, userRole) => {
       return;
     }
 
+    // Additional safety check for userId when needed
+    if (userInfo.role !== 'DIRECTOR' && !userInfo.userId) {
+      setError('User ID is missing for non-director role.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       let result;
       const isSearching = searchParams && Object.keys(searchParams).length > 0;
+      
+      console.log('🔍 Search params:', searchParams);
+      console.log('🔍 Is searching:', isSearching);
+      console.log('🔍 User info:', { role: userInfo.role, userId: userInfo.userId, companyId: userInfo.companyId });
 
       const backendSearchParams = {
-        search: searchParams?.query,
+        search: searchParams?.search,
         status: searchParams?.status,
         source: searchParams?.source,
         createdBy: searchParams?.createdBy,
         minBudget: searchParams?.budget?.split('-')[0],
         maxBudget: searchParams?.budget?.split('-')[1],
       };
+      
+      console.log('🔍 Raw searchParams:', searchParams);
+      console.log('🔍 Search value:', searchParams?.search);
+      console.log('🔍 Search type:', typeof searchParams?.search);
 
       // Map assignedTo filter to action parameter
       if (searchParams?.assignedTo) {
@@ -81,14 +124,23 @@ export const useLeads = (companyId, userId, userRole) => {
       });
 
       const isBackendSearching = Object.keys(backendSearchParams).length > 0;
+      
+      console.log('🔍 Backend search params:', backendSearchParams);
+      console.log('🔍 Is backend searching:', isBackendSearching);
 
       // SEARCH
       if (isBackendSearching) {
         if (userInfo.role === 'DIRECTOR') {
           result = await LeadService.searchLeads(userInfo.companyId, backendSearchParams, { page, size });
         } else if (userInfo.role === 'ADMIN') {
+          if (!userInfo.userId) {
+            throw new Error('User ID is required for admin role');
+          }
           result = await LeadService.searchLeadsVisibleToAdmin(userInfo.companyId, userInfo.userId, backendSearchParams, { page, size });
         } else {
+          if (!userInfo.userId) {
+            throw new Error('User ID is required for user role');
+          }
           result = await LeadService.searchLeadsCreatedOrAssigned(userInfo.companyId, userInfo.userId, backendSearchParams, { page, size });
         }
       } 
@@ -97,8 +149,14 @@ export const useLeads = (companyId, userId, userRole) => {
         if (userInfo.role === 'DIRECTOR') {
           result = await LeadService.getLeadsByCompany(userInfo.companyId, page, size);
         } else if (userInfo.role === 'ADMIN') {
+          if (!userInfo.userId) {
+            throw new Error('User ID is required for admin role');
+          }
           result = await LeadService.getLeadsVisibleToAdmin(userInfo.companyId, userInfo.userId, page, size);
         } else {
+          if (!userInfo.userId) {
+            throw new Error('User ID is required for user role');
+          }
           result = await LeadService.getLeadsCreatedOrAssigned(userInfo.companyId, userInfo.userId, page, size);
         }
       }
@@ -265,6 +323,10 @@ export const useLeads = (companyId, userId, userRole) => {
       return { success: false, error: 'User ID is missing or user not authenticated.' };
     }
 
+    if (!userInfo.token) {
+      return { success: false, error: 'Authentication token is missing. Please login again.' };
+    }
+
     try {
       // Add userId to the remark data as required by the backend (same as web version)
       const data = { ...remarkData, userId: userInfo.userId };
@@ -288,6 +350,12 @@ export const useLeads = (companyId, userId, userRole) => {
       }
     } catch (err) {
       console.error('❌ Failed to add remark:', err);
+      
+      // Check if it's an authentication error
+      if (err.response?.status === 401) {
+        return { success: false, error: 'Authentication failed. Please login again.' };
+      }
+      
       return { success: false, error: 'Failed to add remark' };
     }
   }, [getUserInfo]);
@@ -371,28 +439,63 @@ export const useLeads = (companyId, userId, userRole) => {
     const userInfo = await getUserInfo();
     
     if (!userInfo || !userInfo.companyId) {
-      throw new Error('Company ID is missing or user not authenticated.');
+      return { success: false, error: 'Company ID is missing or user not authenticated.' };
+    }
+
+    if (!userInfo.userId) {
+      return { success: false, error: 'User ID is missing or user not authenticated.' };
+    }
+
+    if (!userInfo.token) {
+      return { success: false, error: 'Authentication token is missing. Please login again.' };
     }
 
     setLoading(true);
     setError(null);
 
     try {
-      // Add leadId to the followUpData
-      const followUpWithLead = { ...followUpData, leadId };
-      const result = await FollowUpService.createFollowUp(userInfo.companyId, followUpWithLead);
+      // Ensure the followUpData has the correct structure
+      const followUpWithUser = { 
+        ...followUpData, 
+        leadId: leadId,
+        userId: userInfo.userId 
+      };
+      
+      console.log('useLeads: Adding follow-up with data:', {
+        companyId: userInfo.companyId,
+        leadId: leadId,
+        followUpData: followUpData,
+        followUpWithUser: followUpWithUser,
+        userId: userInfo.userId
+      });
+      
+      console.log('useLeads: API endpoint will be:', `/api/${userInfo.companyId}/followups`);
+      console.log('useLeads: Request payload:', followUpWithUser);
+      
+      const result = await FollowUpService.createFollowUp(userInfo.companyId, followUpWithUser);
       
       if (result.success) {
+        console.log('✅ Follow-up added successfully');
         // Refresh the leads list
         await _fetchLeads(0, pagination.size);
         return result;
       } else {
-        throw new Error(result.error);
+        console.error('❌ ' + (result.error || 'Failed to add follow-up'));
+        return { success: false, error: result.error || 'Failed to add follow-up' };
       }
     } catch (err) {
+      console.error('❌ Failed to add follow-up:', err);
+      
+      // Check if it's an authentication error
+      if (err.response?.status === 401) {
+        const errorMsg = 'Authentication failed. Please login again.';
+        setError(errorMsg);
+        return { success: false, error: errorMsg };
+      }
+      
       const errorMsg = `Failed to add follow-up: ${err.response?.data?.message || err.message}`;
       setError(errorMsg);
-      throw new Error(errorMsg);
+      return { success: false, error: errorMsg };
     } finally {
       setLoading(false);
     }

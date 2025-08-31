@@ -22,24 +22,33 @@ const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
   loading,
 }) => {
   const getVisibilityOptions = () => {
-    const options = [
-      { value: 'ONLY_ME', label: 'Only Me', icon: 'person' },
-      { value: 'ALL_USERS', label: 'All Users', icon: 'people' },
+    const baseOptions = [
+      { value: 'ONLY_ME', label: '🔒 Only Me', icon: 'person' },
     ];
 
-    if (userRole === 'ADMIN' || userRole === 'DIRECTOR') {
-      options.push({ value: 'ALL_ADMIN', label: 'All Admins', icon: 'shield-checkmark' });
+    if (userRole === 'DIRECTOR') {
+      return [
+        ...baseOptions,
+        { value: 'ALL_USERS', label: '👥 All Users', icon: 'people' },
+        { value: 'SPECIFIC_USERS', label: '👤 Specific Users', icon: 'person-add' },
+        { value: 'ALL_ADMIN', label: '🛡️ All Admins', icon: 'shield-checkmark' },
+        { value: 'SPECIFIC_ADMIN', label: '👨‍💼 Specific Admins', icon: 'shield-add' },
+      ];
+    } else if (userRole === 'ADMIN') {
+      return [
+        ...baseOptions,
+        { value: 'ME_AND_DIRECTOR', label: '🎯 Me and Director', icon: 'star' },
+        { value: 'ALL_USERS', label: '👥 All Users', icon: 'people' },
+        { value: 'SPECIFIC_USERS', label: '👤 Specific Users', icon: 'person-add' },
+      ];
+    } else {
+      // USER role
+      return [
+        ...baseOptions,
+        { value: 'ME_AND_DIRECTOR', label: '🎯 Me and Director', icon: 'star' },
+        { value: 'ME_AND_ADMIN', label: '🛡️ Me and Admin', icon: 'shield' },
+      ];
     }
-
-    options.push(
-      { value: 'SPECIFIC_USERS', label: 'Specific Users', icon: 'person-add' }
-    );
-
-    if (userRole === 'ADMIN' || userRole === 'DIRECTOR') {
-      options.push({ value: 'SPECIFIC_ADMIN', label: 'Specific Admins', icon: 'shield-add' });
-    }
-
-    return options;
   };
 
   const getVisibilityIcon = (value: string) => {
@@ -54,6 +63,35 @@ const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
 
   const isUserSpecific = visibility === 'SPECIFIC_USERS' || visibility === 'SPECIFIC_ADMIN';
 
+  const toggleSelectAll = () => {
+    console.log('VisibilitySelector: Toggle select all clicked');
+    console.log('VisibilitySelector: Current selectedUsers:', selectedUsers);
+    console.log('VisibilitySelector: Available users:', availableUsers);
+    
+    if (selectedUsers.length === availableUsers.length) {
+      // Deselect all - clear the array
+      console.log('VisibilitySelector: Deselecting all users');
+      selectedUsers.forEach(id => onUserSelection(id));
+    } else {
+      // Select all available users
+      console.log('VisibilitySelector: Selecting all users');
+      availableUsers.forEach(user => {
+        const userId = user.id || user.userId;
+        console.log('VisibilitySelector: Processing user:', user, 'userId:', userId);
+        if (userId && !selectedUsers.includes(userId)) {
+          console.log('VisibilitySelector: Adding user to selection:', userId);
+          onUserSelection(userId);
+        }
+      });
+    }
+  };
+
+  const handleUserSelection = (userId: number) => {
+    console.log('VisibilitySelector: User selection clicked for userId:', userId);
+    console.log('VisibilitySelector: Current selectedUsers:', selectedUsers);
+    onUserSelection(userId);
+  };
+
   return (
     <View style={styles.container}>
       {/* Visibility Options */}
@@ -67,11 +105,6 @@ const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
             ]}
             onPress={() => onVisibilityChange(option.value)}
           >
-            <Ionicons 
-              name={option.icon as any} 
-              size={20} 
-              color={visibility === option.value ? '#fff' : '#6b7280'} 
-            />
             <Text style={[
               styles.visibilityOptionText,
               visibility === option.value && styles.visibilityOptionTextSelected
@@ -94,41 +127,79 @@ const VisibilitySelector: React.FC<VisibilitySelectorProps> = ({
               <ActivityIndicator size="small" color="#1c69ff" />
               <Text style={styles.loadingText}>Loading users...</Text>
             </View>
-          ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.usersScroll}
-            >
-              {availableUsers.map((user) => (
-                <TouchableOpacity
-                  key={user.id}
-                  style={[
-                    styles.userChip,
-                    selectedUsers.includes(user.id) && styles.userChipSelected
-                  ]}
-                  onPress={() => onUserSelection(user.id)}
-                >
-                  <Ionicons 
-                    name={selectedUsers.includes(user.id) ? 'checkmark-circle' : 'person-circle-outline'} 
-                    size={20} 
-                    color={selectedUsers.includes(user.id) ? '#fff' : '#6b7280'} 
-                  />
-                  <Text style={[
-                    styles.userChipText,
-                    selectedUsers.includes(user.id) && styles.userChipTextSelected
-                  ]}>
-                    {user.name || user.username || `User ${user.id}`}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
+          ) : availableUsers.length > 0 ? (
+            <>
+              {/* Select All Toggle */}
+                             <TouchableOpacity
+                 style={styles.selectAllButton}
+                 onPress={toggleSelectAll}
+               >
+                 <Ionicons 
+                   name={selectedUsers.length === availableUsers.length ? 'checkbox' : 'square-outline'} 
+                   size={20} 
+                   color={selectedUsers.length === availableUsers.length ? '#1c69ff' : '#6b7280'} 
+                 />
+                 <Text style={styles.selectAllText}>
+                   Select All {visibility === 'SPECIFIC_USERS' ? 'Users' : 'Admins'}
+                 </Text>
+               </TouchableOpacity>
 
-          {selectedUsers.length > 0 && (
-            <View style={styles.selectedUsersInfo}>
-              <Text style={styles.selectedUsersText}>
-                {selectedUsers.length} {visibility === 'SPECIFIC_USERS' ? 'user' : 'admin'}{selectedUsers.length !== 1 ? 's' : ''} selected
+                                            {/* Users List */}
+               <View style={styles.usersListContainer}>
+                 <ScrollView 
+                   showsVerticalScrollIndicator={true}
+                   nestedScrollEnabled={true}
+                   style={styles.usersScrollView}
+                   contentContainerStyle={styles.usersScrollContent}
+                   bounces={false}
+                   alwaysBounceVertical={false}
+                 >
+                   {availableUsers.map((user, index) => {
+                     const userId = user.id || user.userId;
+                     const isSelected = selectedUsers.includes(userId);
+                     
+                     return (
+                       <TouchableOpacity
+                         key={userId}
+                         style={styles.userListItem}
+                         onPress={() => handleUserSelection(userId)}
+                       >
+                         <View style={styles.checkboxContainer}>
+                           <Ionicons 
+                             name={isSelected ? 'checkbox' : 'square-outline'} 
+                             size={20} 
+                             color={isSelected ? '#1c69ff' : '#6b7280'} 
+                           />
+                         </View>
+                         <Text style={styles.userListItemText}>
+                           {user.name || user.username || `User ${userId}`}
+                         </Text>
+                       </TouchableOpacity>
+                     );
+                   })}
+                 </ScrollView>
+               </View>
+
+               {/* Selection Summary - Outside the user list */}
+               <View style={[
+                 styles.selectedUsersInfo,
+                 selectedUsers.length === 0 && styles.selectedUsersInfoEmpty
+               ]}>
+                 <Text style={[
+                   styles.selectedUsersText,
+                   selectedUsers.length === 0 && styles.selectedUsersTextEmpty
+                 ]}>
+                   {selectedUsers.length === 0 
+                     ? `No ${visibility === 'SPECIFIC_USERS' ? 'users' : 'admins'} selected` 
+                     : `${selectedUsers.length} ${visibility === 'SPECIFIC_USERS' ? 'user' : 'admin'}${selectedUsers.length !== 1 ? 's' : ''} selected`
+                   }
+                 </Text>
+               </View>
+            </>
+          ) : (
+            <View style={styles.noUsersContainer}>
+              <Text style={styles.noUsersText}>
+                No {visibility === 'SPECIFIC_USERS' ? 'users' : 'admins'} found
               </Text>
             </View>
           )}
@@ -188,32 +259,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6b7280',
   },
-  usersScroll: {
-    flexGrow: 0,
+  noUsersContainer: {
+    padding: 16,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  userChip: {
+  noUsersText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontStyle: 'italic',
+  },
+  selectAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 20,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    backgroundColor: '#fff',
-    marginRight: 8,
-    gap: 6,
-  },
-  userChipSelected: {
-    backgroundColor: '#1c69ff',
     borderColor: '#1c69ff',
   },
-  userChipText: {
+  selectAllText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6b7280',
+    color: '#1c69ff',
   },
-  userChipTextSelected: {
-    color: '#fff',
+  usersListContainer: {
+    height: 250,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    padding: 8,
+  },
+  usersScrollView: {
+    flex: 1,
+  },
+  usersScrollContent: {
+    paddingBottom: 8,
+  },
+  userListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    gap: 12,
+  },
+  checkboxContainer: {
+    width: 24,
+    alignItems: 'center',
+  },
+  userListItemText: {
+    fontSize: 16,
+    color: '#374151',
+    flex: 1,
   },
   selectedUsersInfo: {
     padding: 12,
@@ -222,11 +325,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1c69ff',
   },
+  selectedUsersInfoEmpty: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#d1d5db',
+  },
   selectedUsersText: {
     fontSize: 14,
     color: '#1c69ff',
     fontWeight: '500',
     textAlign: 'center',
+  },
+  selectedUsersTextEmpty: {
+    color: '#6b7280',
   },
 });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNotesContext } from '../../shared/contexts/NotesContext';
 import { DashboardService } from '../services/dashboard.service';
 

@@ -57,11 +57,23 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
       return;
     }
 
+    // Validate event requirements
+    if (formData.type === 'EVENT' && (!formData.date || !formData.time)) {
+      Alert.alert('Error', 'Please select both date and time for the event');
+      return;
+    }
+
+    // Validate visibility requirements
+    if ((formData.visibility === 'SPECIFIC_USERS' || formData.visibility === 'SPECIFIC_ADMIN') && selectedUsers.length === 0) {
+      Alert.alert('Error', 'Please select at least one user/admin');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const noteData = {
         ...formData,
-        dateTime: formData.date && formData.time ? `${formData.date}T${formData.time}:00` : null,
+        dateTime: formData.type === 'EVENT' ? `${formData.date}T${formData.time}:00` : null,
         visibleUserIds: selectedUsers,
       };
 
@@ -120,6 +132,22 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
     onClose();
   };
 
+  const handleTypeChange = (type: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      type,
+      // Reset date/time when switching to NOTE type
+      date: type === 'NOTE' ? '' : prev.date,
+      time: type === 'NOTE' ? '' : prev.time,
+    }));
+  };
+
+  // Get current date in YYYY-MM-DD format for min date
+  const getCurrentDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   return (
     <Modal
       visible={isVisible}
@@ -130,47 +158,106 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Add New Note</Text>
+          <Text style={styles.title}>
+            {formData.type === 'NOTE' ? '📝 Create Note' : '📅 Schedule Event'}
+          </Text>
           <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
             <Ionicons name="close" size={24} color="#6b7280" />
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Type Selector */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Type</Text>
+            <View style={styles.typeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.typeOption,
+                  formData.type === 'NOTE' && styles.typeOptionSelected
+                ]}
+                onPress={() => handleTypeChange('NOTE')}
+              >
+                <Ionicons 
+                  name="document-text" 
+                  size={20} 
+                  color={formData.type === 'NOTE' ? '#fff' : '#6b7280'} 
+                />
+                <Text style={[
+                  styles.typeOptionText,
+                  formData.type === 'NOTE' && styles.typeOptionTextSelected
+                ]}>
+                  📝 Note
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.typeOption,
+                  formData.type === 'EVENT' && styles.typeOptionSelected
+                ]}
+                onPress={() => handleTypeChange('EVENT')}
+              >
+                <Ionicons 
+                  name="calendar" 
+                  size={20} 
+                  color={formData.type === 'EVENT' ? '#fff' : '#6b7280'} 
+                />
+                <Text style={[
+                  styles.typeOptionText,
+                  formData.type === 'EVENT' && styles.typeOptionTextSelected
+                ]}>
+                  📅 Event
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Date & Time - Show only for Events */}
+          {formData.type === 'EVENT' && (
+            <View style={styles.eventDateTimeContainer}>
+              <Text style={styles.eventDateTimeTitle}>Event Date & Time</Text>
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Event Date *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="YYYY-MM-DD"
+                    value={formData.date}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, date: text }))}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Event Time *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="HH:MM"
+                    value={formData.time}
+                    onChangeText={(text) => setFormData(prev => ({ ...prev, time: text }))}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+              <Text style={styles.helperText}>
+                * Required for events. Use format: YYYY-MM-DD and HH:MM
+              </Text>
+            </View>
+          )}
+
           {/* Content Input */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Note Content *</Text>
+            <Text style={styles.label}>
+              {formData.type === 'NOTE' ? 'Note Content *' : 'Event Description *'}
+            </Text>
             <TextInput
               style={styles.textArea}
-              placeholder="Enter your note content..."
+              placeholder={formData.type === 'NOTE' ? 'Enter your note content...' : 'Describe the event details...'}
               value={formData.content}
               onChangeText={(text) => setFormData(prev => ({ ...prev, content: text }))}
               multiline
               numberOfLines={4}
               textAlignVertical="top"
             />
-          </View>
-
-          {/* Date and Time */}
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Date (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="YYYY-MM-DD"
-                value={formData.date}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, date: text }))}
-              />
-            </View>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Time (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="HH:MM"
-                value={formData.time}
-                onChangeText={(text) => setFormData(prev => ({ ...prev, time: text }))}
-              />
-            </View>
           </View>
 
           {/* Priority and Status */}
@@ -247,7 +334,10 @@ const AddNoteModal: React.FC<AddNoteModalProps> = ({
             disabled={isSubmitting}
           >
             <Text style={styles.submitButtonText}>
-              {isSubmitting ? 'Creating...' : 'Create Note'}
+              {isSubmitting 
+                ? (formData.type === 'NOTE' ? 'Creating...' : 'Scheduling...') 
+                : (formData.type === 'NOTE' ? 'Create Note' : 'Schedule Event')
+              }
             </Text>
           </TouchableOpacity>
         </View>
@@ -342,6 +432,57 @@ const styles = StyleSheet.create({
   },
   pickerOptionTextSelected: {
     color: '#fff',
+  },
+  // New styles for type selector
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: '#fff',
+    gap: 8,
+  },
+  typeOptionSelected: {
+    backgroundColor: '#1c69ff',
+    borderColor: '#1c69ff',
+  },
+  typeOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  typeOptionTextSelected: {
+    color: '#fff',
+  },
+  // New styles for event date/time
+  eventDateTimeContainer: {
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 20,
+  },
+  eventDateTimeTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e40af',
+    marginBottom: 12,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
   footer: {
     flexDirection: 'row',

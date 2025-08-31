@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ThreeDotMenu from '../common/ThreeDotMenu';
+import StatusUpdateModal from '../common/StatusUpdateModal';
 
 interface Property {
   id?: number;
@@ -52,6 +53,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   onOutOfBox,
   companyId
 }) => {
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
   const propertyId = property.id || property.propertyId;
   const propertyName = property.propertyName || property.name;
 
@@ -127,7 +129,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     {
       label: 'Delete Property',
       icon: <Ionicons name="trash" size={14} color="#6b7280" />,
-      onClick: () => onDelete?.(propertyId),
+      onClick: () => propertyId && onDelete?.(propertyId),
       danger: true
     }
   ];
@@ -206,25 +208,29 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       <View style={styles.statusContainer}>
         <TouchableOpacity
           style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}
-          onPress={() => {
-            Alert.alert(
-              'Change Status',
-              'Select new status:',
-              [
-                { text: 'For Sale', onPress: () => handleStatusChange('AVAILABLE_FOR_SALE') },
-                { text: 'For Rent', onPress: () => handleStatusChange('AVAILABLE_FOR_RENT') },
-                { text: 'Rented Out', onPress: () => handleStatusChange('RENT_OUT') },
-                { text: 'Sold Out', onPress: () => handleStatusChange('SOLD_OUT') },
-                { text: 'Cancel', style: 'cancel' }
-              ]
-            );
-          }}
+          onPress={() => setStatusModalVisible(true)}
         >
           <Text style={[styles.statusText, { color: statusStyle.text }]}>
             {getStatusLabel(property.status || '')}
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Status Update Modal */}
+      <StatusUpdateModal
+        visible={statusModalVisible}
+        onClose={() => setStatusModalVisible(false)}
+        onStatusUpdate={handleStatusChange}
+        title="Update Status"
+        subtitle="Select new status"
+        statusOptions={[
+          { value: 'AVAILABLE_FOR_SALE', label: 'For Sale' },
+          { value: 'AVAILABLE_FOR_RENT', label: 'For Rent' },
+          { value: 'RENT_OUT', label: 'Rented Out' },
+          { value: 'SOLD_OUT', label: 'Sold Out' }
+        ]}
+        currentStatus={property.status}
+      />
 
       {/* Footer */}
       <View style={styles.footer}>

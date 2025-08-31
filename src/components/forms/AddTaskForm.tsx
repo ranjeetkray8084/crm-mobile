@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTasks } from '../../core/hooks/useTasks';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../../shared/contexts/AuthContext';
 import * as DocumentPicker from 'expo-document-picker';
 
 interface AddTaskFormProps {
@@ -20,29 +20,36 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
   const [file, setFile] = useState<any>(null);
   const [error, setError] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
-  const [companyId, setCompanyId] = useState<string>('');
-  const [userId, setUserId] = useState<string>('');
-  const [userRole, setUserRole] = useState<string>('');
+  
+  const { user } = useAuth();
+  const companyId = user?.companyId?.toString() || '';
+  const userId = user?.userId?.toString() || user?.id?.toString() || '';
+  const userRole = user?.role || '';
+
+  // Debug logging
+  console.log('AddTaskForm: User data:', {
+    hasUser: !!user,
+    companyId,
+    userId,
+    userRole,
+    userKeys: user ? Object.keys(user) : []
+  });
 
   const { uploadExcelFile } = useTasks(companyId, userId, userRole);
 
-  useEffect(() => {
-    const loadUserInfo = async () => {
-      try {
-        const userData = await AsyncStorage.getItem('crm_user');
-        if (userData) {
-          const user = JSON.parse(userData);
-          setCompanyId(user.companyId?.toString() || '');
-          setUserId(user.userId?.toString() || user.id?.toString() || '');
-          setUserRole(user.role || '');
-        }
-      } catch (error) {
-        console.error('Error loading user info:', error);
-      }
-    };
+  // No need for useEffect to load user info - useAuth hook handles this
 
-    loadUserInfo();
-  }, []);
+  // Show loading state while user data is being fetched
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="hourglass" size={48} color="#7c3aed" />
+          <Text style={styles.loadingText}>Loading user information...</Text>
+        </View>
+      </View>
+    );
+  }
 
   const pickDocument = async () => {
     try {
@@ -133,7 +140,9 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
       <View style={styles.container}>
         <View style={styles.warningContainer}>
           <Ionicons name="warning" size={24} color="#dc2626" />
-          <Text style={styles.warningText}>Company information is missing. Please log in again.</Text>
+          <Text style={styles.warningText}>
+            Company ID is missing from user data. Please check your login status or contact support.
+          </Text>
         </View>
       </View>
     );
@@ -357,6 +366,18 @@ const styles = StyleSheet.create({
     color: '#92400e',
     fontSize: 14,
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#7c3aed',
+    marginTop: 16,
+    textAlign: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',

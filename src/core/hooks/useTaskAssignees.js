@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { UserService } from '../services';
 
 export const useTaskAssignees = (companyId, currentUserRole, currentUserId) => {
@@ -29,6 +29,7 @@ export const useTaskAssignees = (companyId, currentUserRole, currentUserId) => {
             }
 
             if (result.success) {
+                console.log('useTaskAssignees: Raw user data:', result.data);
                 setAllUsers(result.data || []);
             } else {
                 setError(result.error);
@@ -42,19 +43,28 @@ export const useTaskAssignees = (companyId, currentUserRole, currentUserId) => {
 
     // Filter users based on current user role
     const filteredUsers = useMemo(() => {
+        console.log('useTaskAssignees: Filtering users', { allUsers: allUsers.length, currentUserRole });
         if (!allUsers.length || !currentUserRole) return [];
 
         let filtered = [];
 
         if (currentUserRole === 'DIRECTOR') {
             // Director can assign to: USER and ADMIN roles only
-            filtered = allUsers.filter(user =>
-                user.role === 'USER' || user.role === 'ADMIN'
-            );
+            filtered = allUsers.filter(user => {
+                const canAssign = user.role === 'USER' || user.role === 'ADMIN';
+                console.log('Director filtering user:', user.name, user.role, canAssign);
+                return canAssign;
+            });
         } else if (currentUserRole === 'ADMIN') {
             // Admin can assign to: Only USER role users assigned to them
-            filtered = allUsers.filter(user => user.role === 'USER');
+            filtered = allUsers.filter(user => {
+                const canAssign = user.role === 'USER';
+                console.log('Admin filtering user:', user.name, user.role, canAssign);
+                return canAssign;
+            });
         }
+
+        console.log('useTaskAssignees: Filtered users count:', filtered.length);
 
         // Sort alphabetically by name
         return filtered.sort((a, b) => {
@@ -66,11 +76,13 @@ export const useTaskAssignees = (companyId, currentUserRole, currentUserId) => {
 
     // Format users for dropdown
     const dropdownUsers = useMemo(() => {
-        return filteredUsers.map(user => ({
+        const formatted = filteredUsers.map(user => ({
             id: user.id || user.userId,
             name: user.name || user.username || user.email || 'Unknown User',
             role: user.role
         }));
+        console.log('useTaskAssignees: Formatted users:', formatted);
+        return formatted;
     }, [filteredUsers]);
 
     useEffect(() => {

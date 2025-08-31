@@ -2,16 +2,28 @@ import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import NoteCard from './NoteCard';
 
+interface Note {
+  id: number;
+  content: string;
+  typeStr?: string;
+  status?: string;
+  priority?: string;
+  userId: number;
+  [key: string]: any;
+}
+
 interface NotesListProps {
-  notes: any[];
+  notes: Note[];
   loading: boolean;
   error: string | null;
   onEdit: (noteId: number) => void;
   onDelete: (noteId: number) => void;
   onUpdateStatus: (noteId: number, status: string) => void;
   onUpdatePriority: (noteId: number, priority: string) => void;
-  onAddRemark: (noteId: number) => void;
-  onViewRemarks: (noteId: number) => void;
+  onAddRemark: (note: Note) => void;
+  onViewRemarks: (note: Note) => void;
+  userRole?: string;
+  currentUserId?: number;
 }
 
 const NotesList: React.FC<NotesListProps> = ({
@@ -24,6 +36,8 @@ const NotesList: React.FC<NotesListProps> = ({
   onUpdatePriority,
   onAddRemark,
   onViewRemarks,
+  userRole,
+  currentUserId,
 }) => {
   if (loading) {
     return (
@@ -65,6 +79,8 @@ const NotesList: React.FC<NotesListProps> = ({
           onUpdatePriority={onUpdatePriority}
           onAddRemark={onAddRemark}
           onViewRemarks={onViewRemarks}
+          userRole={userRole}
+          currentUserId={currentUserId}
         />
       ))}
     </View>

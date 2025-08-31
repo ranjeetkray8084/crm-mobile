@@ -82,7 +82,13 @@ export class DashboardService {
     try {
       const apiUrl = API_ENDPOINTS.LEADS.COUNT_SUMMARY(companyId, userId);
       
+      console.log('🔗 DashboardService: Making request to:', apiUrl);
+      console.log('🔗 DashboardService: Full URL will be:', axios.defaults.baseURL + apiUrl);
+      console.log('🔗 DashboardService: companyId:', companyId, 'userId:', userId);
+      
       const response = await axios.get(apiUrl);
+      
+      console.log('✅ DashboardService: Response received:', response.data);
       
       return {
         success: true,
@@ -90,6 +96,10 @@ export class DashboardService {
         message: response?.data?.message || 'Operation successful'
       };
     } catch (error) {
+      console.error('❌ DashboardService: Error occurred:', error);
+      console.error('❌ DashboardService: Error response:', error.response?.data);
+      console.error('❌ DashboardService: Error status:', error.response?.status);
+      
       // Return fallback data instead of throwing error
       return {
         success: true,

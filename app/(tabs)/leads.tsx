@@ -17,14 +17,34 @@ export default function LeadsScreen() {
   useEffect(() => {
     const loadUserInfo = async () => {
       try {
-        const userData = await AsyncStorage.getItem('crm_user');
+        // Try new storage keys first
+        let userData = await AsyncStorage.getItem('user');
+        
+        // If not found, try old storage keys and migrate
+        if (!userData) {
+          const oldUserData = await AsyncStorage.getItem('crm_user');
+          if (oldUserData) {
+            console.log('🔍 Found user in old storage key, migrating...');
+            // Migrate to new keys
+            await AsyncStorage.setItem('user', oldUserData);
+            // Clear old key
+            await AsyncStorage.removeItem('crm_user');
+            userData = oldUserData;
+            console.log('🔍 Migration completed');
+          }
+        }
+        
         if (userData) {
           const user = JSON.parse(userData);
-          setUserInfo({
+          const userInfo = {
             userId: user.userId?.toString() || user.id?.toString() || '',
             userRole: user.role || '',
             companyId: user.companyId?.toString() || ''
-          });
+          };
+          console.log('🔑 Loaded user info:', userInfo);
+          setUserInfo(userInfo);
+        } else {
+          console.warn('⚠️ No user data found in AsyncStorage');
         }
       } catch (error) {
         console.error('Error loading user info:', error);
@@ -45,13 +65,13 @@ export default function LeadsScreen() {
     );
   }
 
-  if (!userInfo.companyId) {
+  if (!userInfo.companyId || !userInfo.userId) {
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle" size={48} color="#ef4444" />
         <Text style={styles.errorTitle}>Authentication Required</Text>
         <Text style={styles.errorMessage}>
-          Please log in to access leads management.
+          Please log in to access leads management. Missing company ID or user ID.
         </Text>
       </View>
     );

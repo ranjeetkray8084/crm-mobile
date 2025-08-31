@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
 import LeadCard from './LeadCard';
+import Pagination from './Pagination';
 import { Lead } from '../../types/lead';
 
 interface LeadsListProps {
@@ -18,6 +19,14 @@ interface LeadsListProps {
   companyId?: string;
   refreshing?: boolean;
   onRefresh?: () => void;
+  // Add pagination props
+  currentPage?: number;
+  pagination?: {
+    totalPages: number;
+    totalElements: number;
+    size: number;
+  };
+  onPageChange?: (page: number) => void;
 }
 
 const LeadsList: React.FC<LeadsListProps> = ({
@@ -25,6 +34,9 @@ const LeadsList: React.FC<LeadsListProps> = ({
   searchTerm,
   refreshing = false,
   onRefresh,
+  currentPage = 0,
+  pagination,
+  onPageChange,
   ...actionHandlers
 }) => {
   const getValidLeadId = (lead: Lead) => lead?.leadId ?? lead?.id;
@@ -52,6 +64,19 @@ const LeadsList: React.FC<LeadsListProps> = ({
 
   const keyExtractor = (item: Lead) => getValidLeadId(item) || item.name;
 
+  // Render pagination as footer
+  const renderPaginationFooter = () => {
+    if (!pagination || pagination.totalPages <= 1) return null;
+    
+    return (
+      <Pagination
+        currentPage={currentPage}
+        pagination={pagination}
+        onPageChange={onPageChange || (() => {})}
+      />
+    );
+  };
+
   if (filteredLeads.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -74,7 +99,8 @@ const LeadsList: React.FC<LeadsListProps> = ({
         onRefresh ? (
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         ) : undefined
-        }
+      }
+      ListFooterComponent={renderPaginationFooter}
     />
   );
 };

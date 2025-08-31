@@ -1,32 +1,63 @@
 // app/index.tsx
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../src/shared/contexts/AuthContext';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 export default function Index() {
   const router = useRouter();
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, isReady: authReady } = useAuth();
+  const [hasNavigated, setHasNavigated] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  // Wait for both the layout and auth context to be ready
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
+    // Prevent multiple navigation attempts and wait for both to be ready
+    if (hasNavigated || !isReady || !authReady) return;
+
     if (!loading) {
-      if (isAuthenticated) {
-        router.replace('/(tabs)');
-      } else {
+      try {
+        if (isAuthenticated) {
+          console.log('Index: User authenticated, navigating to tabs');
+          setHasNavigated(true);
+          router.replace('/(tabs)');
+        } else {
+          console.log('Index: User not authenticated, navigating to login');
+          setHasNavigated(true);
+          router.replace('/login');
+        }
+      } catch (error) {
+        console.error('Index: Navigation error:', error);
+        // Fallback to login on error
+        setHasNavigated(true);
         router.replace('/login');
       }
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, loading, router, hasNavigated, isReady, authReady]);
 
-  if (loading) {
+  if (loading || !isReady || !authReady) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#1c69ff" />
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
-  return null;
+  // Show loading while waiting for navigation
+  return (
+    <View style={styles.container}>
+      <ActivityIndicator size="large" color="#1c69ff" />
+      <Text style={styles.loadingText}>Redirecting...</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -35,5 +66,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280',
   },
 });

@@ -28,6 +28,8 @@ const LeadFilters: React.FC<LeadFiltersProps> = ({
   hasActiveFilters,
   activeFiltersSummary,
   userRole,
+  userId,
+  companyId,
   availableUsers = []
 }) => {
   const [expandedSections, setExpandedSections] = useState<string[]>([]);

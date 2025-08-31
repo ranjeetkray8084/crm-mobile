@@ -33,17 +33,17 @@ export default function Sidebar({
 
   const getMenuItems = () => {
     const commonItems = [
-      { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline' }
+      { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline' },
+      { id: 'notificationTest', label: '🔔 Test Notifications', icon: 'notifications-outline' },
+    { id: 'tokenStatus', label: '🔑 Token Status', icon: 'key-outline' },
     ];
 
     const roleSpecificItems = {
       ADMIN: [
         { id: 'users', label: 'Users Management', icon: 'people-outline' },
-        { id: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
         { id: 'account', label: 'Account Settings', icon: 'person-outline' },
       ],
       USER: [
-        { id: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
         { id: 'account', label: 'Account Settings', icon: 'person-outline' },
       ],
       DEVELOPER: [
@@ -58,7 +58,6 @@ export default function Sidebar({
       DIRECTOR: [
         { id: 'viewAdmins', label: 'Admins', icon: 'people-outline' },
         { id: 'viewUsers', label: 'Users', icon: 'people-outline' },
-        { id: 'notifications', label: 'Notifications', icon: 'notifications-outline' },
         { id: 'account', label: 'Account Settings', icon: 'person-outline' },
       ],
     };
@@ -68,12 +67,16 @@ export default function Sidebar({
   };
 
   const handleSectionChange = (section: string) => {
+  console.log('🔔 DEBUG: Sidebar: handleSectionChange called with section:', section);
+    
     if (section === 'logout') {
+      console.log('🔔 DEBUG: Sidebar: Handling logout...');
       handleLogout();
       return;
     }
 
     // Only change the section to show content in main area
+    console.log('🔔 DEBUG: Sidebar: Changing to section:', section);
     onSectionChange(section);
     onClose();
   };

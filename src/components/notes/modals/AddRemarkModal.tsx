@@ -10,43 +10,72 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+interface Note {
+  id: number;
+  content: string;
+  typeStr?: string;
+  status?: string;
+  priority?: string;
+  userId: number;
+  [key: string]: any;
+}
+
 interface AddRemarkModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onAddRemark: (noteId: number, remarkData: any) => Promise<void>;
-  noteId: number;
-  userId: number;
+  onAddRemark: (remarkData: any) => Promise<void>;
+  note: Note;
 }
 
 const AddRemarkModal: React.FC<AddRemarkModalProps> = ({
   isVisible,
   onClose,
   onAddRemark,
-  noteId,
-  userId,
+  note,
 }) => {
   const [remark, setRemark] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // The modal now depends on the `note` object instead of just the ID.
+  if (!isVisible || !note) {
+    return null;
+  }
+
   const handleSubmit = async () => {
     if (!remark.trim()) {
-      Alert.alert('Error', 'Please enter a remark');
+      Alert.alert('Error', 'Please enter a remark before submitting.');
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const remarkData = {
-        remark: remark.trim(),
-        userId,
-      };
+    if (!note || !note.id) {
+      console.error('AddRemarkModal: Invalid note object:', note);
+      Alert.alert('Error', 'Invalid note information. Please try again.');
+      return;
+    }
 
-      await onAddRemark(noteId, remarkData);
-      
-      // Reset form
+    if (typeof onAddRemark !== 'function') {
+      console.error('AddRemarkModal: onAddRemark is not a function:', onAddRemark);
+      Alert.alert('Error', 'Invalid remark submission function. Please contact support.');
+      return;
+    }
+
+    console.log('AddRemarkModal: Starting submission process...');
+    console.log('AddRemarkModal: Note object:', note);
+    console.log('AddRemarkModal: Note ID:', note.id);
+    console.log('AddRemarkModal: Remark text:', remark.trim());
+    console.log('AddRemarkModal: onAddRemark function:', typeof onAddRemark);
+    
+    setIsSubmitting(true);
+
+    try {
+      // The parent now handles getting the ID, so we just pass the remark data.
+      await onAddRemark({ remark: remark.trim() });
+
+      // Reset form and close modal on success
       setRemark('');
+      onClose();
     } catch (error) {
-      console.error('Error adding remark:', error);
+      // Error handling is done by the parent
     } finally {
       setIsSubmitting(false);
     }
@@ -60,56 +89,73 @@ const AddRemarkModal: React.FC<AddRemarkModalProps> = ({
   return (
     <Modal
       visible={isVisible}
+      transparent
       animationType="slide"
-      presentationStyle="pageSheet"
       onRequestClose={handleClose}
     >
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Add Remark</Text>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color="#6b7280" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Remark *</Text>
-            <TextInput
-              style={styles.textArea}
-              placeholder="Enter your remark..."
-              value={remark}
-              onChangeText={setRemark}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
+      <View style={styles.overlay}>
+        <View style={styles.modal}>
+          {/* Header now displays the note's content */}
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              Add Remark for: <Text style={styles.noteContent}>
+                {note.content ? (note.content.length > 30 ? note.content.substring(0, 30) + '...' : note.content) : 'Note'}
+              </Text>
+            </Text>
+            <TouchableOpacity
+              onPress={handleClose}
+              style={styles.closeButton}
+              aria-label="Close modal"
+            >
+              <Ionicons name="close" size={24} color="#6b7280" />
+            </TouchableOpacity>
           </View>
 
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle" size={20} color="#1c69ff" />
-            <Text style={styles.infoText}>
-              Remarks are additional comments or updates that can be added to notes.
-            </Text>
-          </View>
-        </View>
+          {/* Form */}
+          <View style={styles.form}>
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Remark *</Text>
+              <TextInput
+                style={styles.textArea}
+                value={remark}
+                onChangeText={setRemark}
+                placeholder="Enter your remark here..."
+                placeholderTextColor="#9ca3af"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                editable={!isSubmitting}
+              />
+            </View>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <TouchableOpacity onPress={handleClose} style={styles.cancelButton}>
-            <Text style={styles.cancelButtonText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleSubmit}
-            style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.submitButtonText}>
-              {isSubmitting ? 'Adding...' : 'Add Remark'}
-            </Text>
-          </TouchableOpacity>
+            <View style={styles.infoBox}>
+              <Ionicons name="information-circle" size={20} color="#1c69ff" />
+              <Text style={styles.infoText}>
+                Remarks are additional comments or updates that can be added to notes.
+              </Text>
+            </View>
+          </View>
+
+          {/* Buttons */}
+          <View style={styles.actions}>
+            <TouchableOpacity
+              onPress={handleClose}
+              style={styles.cancelButton}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={handleSubmit}
+              style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.submitButtonText}>
+                {isSubmitting ? 'Adding...' : 'Add Remark'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Modal>
@@ -117,32 +163,51 @@ const AddRemarkModal: React.FC<AddRemarkModalProps> = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
+  overlay: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modal: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e2e8f0',
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1f2937',
+    flex: 1,
+    marginRight: 10,
+  },
+  noteContent: {
+    color: '#1c69ff',
+    fontWeight: '500',
   },
   closeButton: {
     padding: 4,
   },
-  content: {
-    flex: 1,
+  form: {
     padding: 20,
   },
-  inputGroup: {
+  formGroup: {
     marginBottom: 20,
   },
   label: {
@@ -160,6 +225,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1f2937',
     minHeight: 100,
+    textAlignVertical: 'top',
   },
   infoBox: {
     flexDirection: 'row',
@@ -177,11 +243,10 @@ const styles = StyleSheet.create({
     color: '#1c69ff',
     lineHeight: 20,
   },
-  footer: {
+  actions: {
     flexDirection: 'row',
     gap: 12,
     padding: 20,
-    backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
   },

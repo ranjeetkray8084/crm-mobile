@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, ScrollView, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, ScrollView, Animated, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { FollowUpService } from '../../../core/services/followup.service';
@@ -15,7 +15,7 @@ interface Lead {
 interface AddFollowUpModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onAddFollowUp: (data: any) => void;
+  onAddFollowUp: (data: any) => Promise<{ success: boolean; data?: any; error?: string }>;
   lead: Lead | null;
 }
 
@@ -30,6 +30,7 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const spinValue = useRef(new Animated.Value(0)).current;
 
   // Animation for spinner
@@ -55,9 +56,10 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
 
   useEffect(() => {
     if (isVisible) {
-      // Set default follow-up date to tomorrow
+      // Set default follow-up date to tomorrow at 9:00 AM
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(9, 0, 0, 0); // Set to 9:00 AM
       setFollowupDate(tomorrow);
       setNote('');
       setError(null);
@@ -74,13 +76,48 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
     setError(null);
 
     try {
-      // Get companyId and userId from AsyncStorage
-      const userStr = await AsyncStorage.getItem('user');
+            // Get companyId and userId from AsyncStorage - use same keys as web version
+      let userStr = await AsyncStorage.getItem('user');
+      let tokenStr = await AsyncStorage.getItem('token');
+      
+      // If not found, try to migrate from old keys
+      if (!userStr || !tokenStr) {
+        console.log('🔍 Trying to migrate from old storage keys...');
+        const oldUserStr = await AsyncStorage.getItem('crm_user');
+        const oldTokenStr = await AsyncStorage.getItem('crm_token');
+        
+        if (oldUserStr && oldTokenStr) {
+          console.log('🔍 Found old storage data, migrating...');
+          // Migrate to new keys
+          await AsyncStorage.setItem('user', oldUserStr);
+          await AsyncStorage.setItem('token', oldTokenStr);
+          // Clear old keys
+          await AsyncStorage.removeItem('crm_user');
+          await AsyncStorage.removeItem('crm_token');
+          
+          userStr = oldUserStr;
+          tokenStr = oldTokenStr;
+          console.log('🔍 Migration completed');
+        }
+      }
+      
       const user = userStr ? JSON.parse(userStr) : {};
       const companyId = user.companyId;
-
+      
+      console.log('🔍 AddFollowUpModal - Storage keys checked:');
+      console.log('🔍 user key:', userStr ? 'found' : 'not found');
+      console.log('🔍 token key:', tokenStr ? 'found' : 'not found');
+      
+      console.log('🔍 User data from storage:', user);
+      console.log('🔍 Company ID found:', companyId);
+      console.log('🔍 User ID found:', user.userId || user.id);
+      
+      if (!userStr || !tokenStr) {
+        throw new Error('You are not logged in. Please log in to continue.');
+      }
+      
       if (!companyId) {
-        throw new Error('Company ID not found');
+        throw new Error('Company ID not found. Please log out and log in again to refresh your session.');
       }
 
       // Format data exactly as required: {"followUpDate": "2025-08-08T00:00:00", "note": "Initial contact made. Follow-up in 3 days.", "leadId": 35, "userId": 24}
@@ -91,36 +128,54 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
         userId: parseInt(user.userId || user.id || '1')
       };
 
-      const result = await FollowUpService.createFollowUp(companyId, followUpData);
-      
-      if (result.success) {
-        // Show success alert with lead name and notification info
-        const leadName = lead?.name || 'Lead';
-        const followUpDate = new Date(followUpData.followUpDate);
-        const formattedDate = followUpDate.toLocaleDateString('en-IN');
-        const formattedTime = followUpDate.toLocaleTimeString('en-IN', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: false 
-        });
+      console.log('📤 Sending follow-up data:', followUpData);
+      console.log('📤 Company ID:', companyId);
+      console.log('📤 Lead ID:', lead?.leadId || lead?.id);
+      console.log('📤 User ID:', user.userId || user.id);
+
+      // Call the parent's onAddFollowUp callback instead of calling the service directly
+      if (onAddFollowUp) {
+        const result = await onAddFollowUp(followUpData);
         
-        Alert.alert(
-          '✅ Success!',
-          `Follow-up created successfully for ${leadName}!\n📅 Scheduled for: ${formattedDate} at ${formattedTime}\n🔔 Notification will be sent on the scheduled date.`,
-          [{ text: 'OK', onPress: () => {
-            // Call the parent's onAddFollowUp callback if provided
-            if (onAddFollowUp) {
-              onAddFollowUp(followUpData);
-            }
-            onClose();
-          }}]
-        );
+        if (result && result.success) {
+          // Show success alert with lead name and notification info
+          const leadName = lead?.name || 'Lead';
+          const followUpDate = new Date(followUpData.followUpDate);
+          const formattedDate = followUpDate.toLocaleDateString('en-IN');
+          const formattedTime = followUpDate.toLocaleTimeString('en-IN', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+          });
+          
+          Alert.alert(
+            '✅ Success!',
+            `Follow-up created successfully for ${leadName}!\n📅 Date: ${formattedDate}\n🕐 Time: ${formattedTime}\n🔔 Notification will be sent on the scheduled date.`,
+            [{ text: 'OK', onPress: () => onClose() }]
+          );
+        } else {
+          const errorMsg = result?.error || 'Failed to create follow-up';
+          console.error('❌ Follow-up creation failed:', result);
+          setError(errorMsg);
+          Alert.alert('❌ Error', errorMsg);
+        }
       } else {
-        setError(result.error);
-        Alert.alert('❌ Error', 'Failed to create follow-up: ' + result.error);
+        throw new Error('onAddFollowUp callback is required');
       }
-    } catch (error) {
-      const errorMessage = 'Failed to add follow-up. Please try again.';
+    } catch (error: any) {
+      console.error('❌ Unexpected error in follow-up creation:', error);
+      
+      let errorMessage = 'Failed to add follow-up. Please try again.';
+      
+      // Provide more specific error messages
+      if (error?.message?.includes('not logged in')) {
+        errorMessage = 'You are not logged in. Please log in to continue.';
+      } else if (error?.message?.includes('Company ID not found')) {
+        errorMessage = 'Session expired. Please log out and log in again.';
+      } else if (error?.message?.includes('Authentication failed')) {
+        errorMessage = 'Authentication failed. Please log in again.';
+      }
+      
       setError(errorMessage);
       Alert.alert('❌ Error', errorMessage);
     } finally {
@@ -129,19 +184,80 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      setFollowupDate(selectedDate);
+    // Handle Android date picker dismissal properly
+    if (Platform.OS === 'android') {
+      // On Android, always close the picker after selection
+      setShowDatePicker(false);
+      
+      // Only update date if user actually selected one (not cancelled)
+      if (selectedDate) {
+        // Keep the current time, only update the date part
+        const currentTime = followupDate;
+        const newDate = new Date(selectedDate);
+        newDate.setHours(currentTime.getHours(), currentTime.getMinutes());
+        setFollowupDate(newDate);
+      }
+    } else {
+      // For iOS, handle the event type
+      if (event.type === 'dismissed') {
+        setShowDatePicker(false);
+      } else if (selectedDate) {
+        // Keep the current time, only update the date part
+        const currentTime = followupDate;
+        const newDate = new Date(selectedDate);
+        newDate.setHours(currentTime.getHours(), currentTime.getMinutes());
+        setFollowupDate(newDate);
+      }
     }
+  };
+
+  const handleTimeChange = (event: any, selectedTime?: Date) => {
+    // Handle Android time picker dismissal properly
+    if (Platform.OS === 'android') {
+      // On Android, always close the picker after selection
+      setShowTimePicker(false);
+      
+      // Only update time if user actually selected one (not cancelled)
+      if (selectedTime) {
+        // Keep the current date, only update the time part
+        const newDateTime = new Date(followupDate);
+        newDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+        setFollowupDate(newDateTime);
+      }
+    } else {
+      // For iOS, handle the event type
+      if (event.type === 'dismissed') {
+        setShowTimePicker(false);
+      } else if (selectedTime) {
+        // Keep the current date, only update the time part
+        const newDateTime = new Date(followupDate);
+        newDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+        setFollowupDate(newDateTime);
+      }
+    }
+  };
+
+  const handleDatePickerCancel = () => {
+    setShowDatePicker(false);
+  };
+
+  const handleTimePickerCancel = () => {
+    setShowTimePicker(false);
   };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'short',
-      year: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-IN', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: false
     });
   };
 
@@ -178,12 +294,26 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity 
-                onPress={() => setError(null)}
-                style={styles.dismissButton}
-              >
-                <Text style={styles.dismissButtonText}>Dismiss</Text>
-              </TouchableOpacity>
+              <View style={styles.errorActions}>
+                <TouchableOpacity 
+                  onPress={() => setError(null)}
+                  style={styles.dismissButton}
+                >
+                  <Text style={styles.dismissButtonText}>Dismiss</Text>
+                </TouchableOpacity>
+                {error.includes('log in') && (
+                  <TouchableOpacity 
+                    onPress={() => {
+                      setError(null);
+                      onClose();
+                      // The user should navigate to login screen
+                    }}
+                    style={styles.loginButton}
+                  >
+                    <Text style={styles.loginButtonText}>Go to Login</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           )}
 
@@ -213,7 +343,7 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
             <View style={styles.formGroup}>
               <Text style={styles.label}>
                 <Ionicons name="calendar" size={16} color="#6b7280" />
-                {' '}Follow-up Date & Time *
+                {' '}Follow-up Date *
               </Text>
               <TouchableOpacity
                 style={styles.dateButton}
@@ -222,6 +352,23 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
               >
                 <Ionicons name="calendar" size={20} color="#6b7280" />
                 <Text style={styles.dateButtonText}>{formatDate(followupDate)}</Text>
+                <Ionicons name="chevron-down" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Follow-up Time */}
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>
+                <Ionicons name="time" size={16} color="#6b7280" />
+                {' '}Follow-up Time *
+              </Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowTimePicker(true)}
+                disabled={loading}
+              >
+                <Ionicons name="time" size={20} color="#6b7280" />
+                <Text style={styles.dateButtonText}>{formatTime(followupDate)}</Text>
                 <Ionicons name="chevron-down" size={20} color="#6b7280" />
               </TouchableOpacity>
             </View>
@@ -262,10 +409,21 @@ const AddFollowUpModal: React.FC<AddFollowUpModalProps> = ({
       {showDatePicker && (
         <DateTimePicker
           value={followupDate}
-          mode="datetime"
-          display="default"
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={handleDateChange}
           minimumDate={new Date()}
+          onTouchCancel={handleDatePickerCancel}
+        />
+      )}
+
+      {showTimePicker && (
+        <DateTimePicker
+          value={followupDate}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleTimeChange}
+          onTouchCancel={handleTimePickerCancel}
         />
       )}
     </Modal>
@@ -341,6 +499,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#dc2626',
     textDecorationLine: 'underline',
+  },
+  errorActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  loginButton: {
+    backgroundColor: '#3b82f6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  loginButtonText: {
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '500',
   },
   content: {
     padding: 20,

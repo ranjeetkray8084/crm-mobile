@@ -1,6 +1,6 @@
 // src/components/Dashboard.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../shared/contexts/AuthContext';
@@ -8,12 +8,13 @@ import { useResponsive } from '../core/hooks/useResponsive';
 import Sidebar from './common/Sidebar';
 import NotificationDropdown from './common/NotificationDropdown';
 import DashboardStats from './dashboard/DashboardStats';
-import DashboardEvents from './dashboard/DashboardEvents';
-import DashboardFollowUps from './dashboard/DashboardFollowUps';
 import NotificationsSection from './notifications/NotificationsSection';
 import UserSection from './users/UserSection';
 import AdminSection from './admins/AdminSection';
 import Logo from "./common/Logo";
+import NotificationTest from './NotificationTest';
+import TokenStatusTest from './common/TokenStatusTest';
+
 
 interface DashboardProps {
   onMenuPress?: () => void;
@@ -113,6 +114,20 @@ export default function Dashboard({
             <NotificationsSection onSectionChange={handleSectionChange} />
           </View>
         );
+      case 'notificationTest':
+        console.log('🔔 DEBUG: Dashboard: Rendering notificationTest section');
+        return (
+          <View style={styles.dashboardSections}>
+            <NotificationTest />
+          </View>
+        );
+      case 'tokenStatus':
+        console.log('🔔 DEBUG: Dashboard: Rendering tokenStatus section');
+        return (
+          <View style={styles.dashboardSections}>
+            <TokenStatusTest />
+          </View>
+        );
       case 'users':
       case 'viewUsers':
         return <UserSection />;
@@ -168,11 +183,39 @@ export default function Dashboard({
           <>
             {/* Dashboard Stats Cards */}
             <DashboardStats />
-
-            {/* Today's Events and Follow-ups */}
+            
+            {/* Push Notification Test Button */}
             <View style={styles.dashboardSections}>
-              <DashboardEvents />
-              <DashboardFollowUps />
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>🔔 Push Notification Test</Text>
+                <Text style={styles.sectionDescription}>
+                  Test your push notification setup and permissions
+                </Text>
+                <TouchableOpacity
+                  style={[styles.testButton, styles.pushTestButton]}
+                  onPress={() => handleSectionChange('notificationTest')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.testButtonText}>🧪 Test Notifications</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Token Status Button */}
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>🔑 Token Status</Text>
+                <Text style={styles.sectionDescription}>
+                  Check and manage your push notification token registration
+                </Text>
+                <TouchableOpacity
+                  style={[styles.testButton, styles.tokenStatusButton]}
+                  onPress={() => handleSectionChange('tokenStatus')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.testButtonText}>🔍 Check Token Status</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </>
         );
@@ -221,7 +264,7 @@ export default function Dashboard({
             </View>
           </View>
 
-          <View style={styles.headerRight}>
+                    <View style={styles.headerRight}>
             <NotificationDropdown onSectionChange={handleSectionChange} />
           </View>
         </View>
@@ -443,4 +486,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#6b7280',
   },
+
+  // Test Button Styles
+  testButton: {
+    backgroundColor: '#1c69ff',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  pushTestButton: {
+    backgroundColor: '#10b981',
+    marginTop: 12,
+  },
+  tokenStatusButton: {
+    backgroundColor: '#34C759',
+    marginTop: 12,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+
 });

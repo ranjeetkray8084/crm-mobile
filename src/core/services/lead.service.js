@@ -1,6 +1,7 @@
 // Lead Service - Reusable for Web & Mobile
 import axios from '../../legacy/api/axios';
 import { API_ENDPOINTS, buildUrl } from './api.endpoints';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class LeadService {
   /**
@@ -451,7 +452,7 @@ export class LeadService {
   static async searchLeads(companyId, searchParams, pageable = {}) {
     try {
       // Check if token exists
-      const token = localStorage.getItem('token');
+      const token = await AsyncStorage.getItem('token');
       
       if (!token) {
         return {
@@ -534,19 +535,22 @@ export class LeadService {
       // Construct final URL
       const finalUrl = `${url}?${urlParams.toString()}`;
       
-      // Debug: Log the final URL to verify format
-  
-      
       // Use the constructed URL directly
+      console.log('🔍 Making search request to:', finalUrl);
       const response = await axios.get(finalUrl);
+      console.log('🔍 Search response received:', response.status, response.data?.content?.length || 0, 'leads');
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
+      console.error('🔍 Search error details:', error);
+      console.error('🔍 Error response:', error.response);
+      console.error('🔍 Error message:', error.message);
+      
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to search leads'
+        error: error.response?.data?.message || error.message || 'Failed to search leads'
       };
     }
   }
@@ -562,7 +566,7 @@ export class LeadService {
   static async searchLeadsCreatedOrAssigned(companyId, userId, searchParams, pageable = {}) {
     try {
       // Check if token exists
-      const token = localStorage.getItem('token');
+      const token = await AsyncStorage.getItem('token');
       
       if (!token) {
         return {
@@ -669,7 +673,7 @@ export class LeadService {
   static async searchLeadsVisibleToAdmin(companyId, adminId, searchParams, pageable = {}) {
     try {
       // Check if token exists
-      const token = localStorage.getItem('token');
+      const token = await AsyncStorage.getItem('token');
       
       if (!token) {
         return {

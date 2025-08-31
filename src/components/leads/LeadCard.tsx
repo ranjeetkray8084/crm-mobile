@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ThreeDotMenu from '../common/ThreeDotMenu';
+import StatusUpdateModal from '../common/StatusUpdateModal';
 import { Lead } from '../../types/lead';
 
 interface LeadCardProps {
@@ -30,6 +31,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
   onAddFollowUp,
   onViewFollowUps
 }) => {
+  const [statusModalVisible, setStatusModalVisible] = useState(false);
   const leadId = lead?.leadId ?? lead?.id;
   if (!leadId) return null;
 
@@ -98,6 +100,12 @@ const LeadCard: React.FC<LeadCardProps> = ({
 
   const formatSource = (source: string | undefined | null) => {
     if (!source || typeof source !== 'string' || source.trim() === '') return 'N/A';
+    
+    // Special handling for REFERENCE source to show reference name
+    if (source === 'REFERENCE' && lead.referenceName && typeof lead.referenceName === 'string' && lead.referenceName.trim()) {
+      return `Reference: ${lead.referenceName.trim()}`;
+    }
+    
     const sourceMap: { [key: string]: string } = {
       "INSTAGRAM": "Instagram",
       "FACEBOOK": "Facebook",
@@ -161,6 +169,11 @@ const LeadCard: React.FC<LeadCardProps> = ({
       onClick: () => onAddRemark(lead)
     },
     {
+      label: 'View Remarks',
+      icon: <Ionicons name="eye" size={14} color="#6b7280" />,
+      onClick: () => onViewRemarks(lead)
+    },
+    {
       label: 'Add Follow-Up',
       icon: <Ionicons name="calendar" size={14} color="#6b7280" />,
       onClick: () => onAddFollowUp(lead)
@@ -169,11 +182,6 @@ const LeadCard: React.FC<LeadCardProps> = ({
       label: 'View Follow-ups',
       icon: <Ionicons name="time" size={14} color="#6b7280" />,
       onClick: () => onViewFollowUps(lead)
-    },
-    {
-      label: 'View Remarks',
-      icon: <Ionicons name="eye" size={14} color="#6b7280" />,
-      onClick: () => onViewRemarks(lead)
     },
     ...(isAssigned ? [{
       label: 'Unassign',
@@ -253,19 +261,7 @@ const LeadCard: React.FC<LeadCardProps> = ({
       <View style={styles.statusContainer}>
         <TouchableOpacity
           style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}
-          onPress={() => {
-            Alert.alert(
-              'Change Status',
-              'Select new status:',
-              [
-                { text: 'New', onPress: () => handleStatusChange('NEW') },
-                { text: 'Contacted', onPress: () => handleStatusChange('CONTACTED') },
-                { text: 'Closed', onPress: () => handleStatusChange('CLOSED') },
-                { text: 'Dropped', onPress: () => handleStatusChange('DROPED') },
-                { text: 'Cancel', style: 'cancel' }
-              ]
-            );
-          }}
+          onPress={() => setStatusModalVisible(true)}
         >
           <Text style={[styles.statusText, { color: statusStyle.text }]}>
             {getStatusLabel(lead.status)}
@@ -281,6 +277,17 @@ const LeadCard: React.FC<LeadCardProps> = ({
               (lead.createdByName && typeof lead.createdByName === 'string' && lead.createdByName.trim()) || 'Unknown'}
         </Text>
       </View>
+
+      {/* Status Update Modal */}
+      <StatusUpdateModal
+        visible={statusModalVisible}
+        onClose={() => setStatusModalVisible(false)}
+        onStatusUpdate={handleStatusChange}
+        title="Update Status"
+        subtitle="Select new status"
+        statusOptions={['NEW', 'CONTACTED', 'CLOSED', 'DROPED']}
+        currentStatus={lead.status}
+      />
     </View>
   );
 };

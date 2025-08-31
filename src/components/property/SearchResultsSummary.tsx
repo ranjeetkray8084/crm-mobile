@@ -6,7 +6,7 @@ interface SearchResultsSummaryProps {
   searchParams: any;
   resultsCount: number;
   onClearAll: () => void;
-  getActiveFiltersSummary: (currentUserId?: number, availableUsers?: any[]) => string;
+  getActiveFiltersSummary: (currentUserId?: any, availableUsers?: any[]) => string;
   currentUserId?: number;
   availableUsers: any[];
 }

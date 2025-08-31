@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 
 /**
  * Enhanced Lead Search Hook with Multi-Key Search Capabilities
@@ -49,7 +49,7 @@ export const useLeadSearch = () => {
     }
 
     if (allSearchTerms.length > 0) {
-      params.query = allSearchTerms.join(' ');
+      params.search = allSearchTerms.join(' ');
     }
 
     // Add filters if they have values
@@ -82,12 +82,32 @@ export const useLeadSearch = () => {
       }
     });
 
+    console.log('🔍 searchParams calculated:', {
+      searchTerm,
+      searchTags,
+      filters,
+      result: params
+    });
+
     return params;
   }, [searchTerm, searchTags, filters]);
 
   // Check if any search/filter is active
   const hasActiveFilters = useMemo(() => {
-    return searchTerm.trim() || searchTags.length > 0 || Object.values(filters).some(value => value && value.trim());
+    const hasSearch = searchTerm.trim();
+    const hasTags = searchTags.length > 0;
+    const hasFilterValues = Object.values(filters).some(value => value && value.trim());
+    
+    console.log('🔍 hasActiveFilters calculation:', {
+      searchTerm: searchTerm,
+      searchTermTrimmed: searchTerm.trim(),
+      hasSearch,
+      hasTags,
+      hasFilterValues,
+      result: hasSearch || hasTags || hasFilterValues
+    });
+    
+    return hasSearch || hasTags || hasFilterValues;
   }, [searchTerm, searchTags, filters]);
 
   // Update individual filter
@@ -163,14 +183,24 @@ export const useLeadSearch = () => {
 
   // Apply search/filters
   const applySearch = useCallback(() => {
+    console.log('🔍 applySearch called:', {
+      hasActiveFilters,
+      searchParams,
+      searchTerm,
+      searchTags: searchTags.length,
+      filters
+    });
+    
     if (hasActiveFilters) {
+      console.log('🔍 Setting search active with params:', searchParams);
       setActiveSearchParams(searchParams);
       setIsSearchActive(true);
     } else {
+      console.log('🔍 Clearing search');
       setActiveSearchParams(null);
       setIsSearchActive(false);
     }
-  }, [hasActiveFilters, searchParams]);
+  }, [hasActiveFilters, searchParams, searchTerm, searchTags, filters]);
 
   // Auto-apply search when parameters change (debounced effect can be added)
   const autoApplySearch = useCallback(() => {
@@ -181,30 +211,50 @@ export const useLeadSearch = () => {
     return () => clearTimeout(timeoutId);
   }, [applySearch]);
 
+  // Auto-apply search when search term changes
+  useEffect(() => {
+    if (searchTerm.trim() || searchTags.length > 0) {
+      const timeoutId = setTimeout(() => {
+        console.log('🔍 Auto-applying search due to search term change:', { searchTerm, searchTags });
+        applySearch();
+      }, 300); // 300ms debounce for search term changes
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Clear search when no search terms
+      console.log('🔍 Clearing search due to no search terms');
+      setActiveSearchParams(null);
+      setIsSearchActive(false);
+    }
+  }, [searchTerm, searchTags, applySearch]);
+
+  // Auto-apply search when filters change
+  useEffect(() => {
+    const hasFilterValues = Object.values(filters).some(value => value && value.trim());
+    if (hasFilterValues) {
+      const timeoutId = setTimeout(() => {
+        console.log('🔍 Auto-applying search due to filter change:', filters);
+        applySearch();
+      }, 300); // 300ms debounce for filter changes
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [filters, applySearch]);
+
   // Apply quick filters
   const applyQuickFilters = useCallback((quickFilters) => {
-    // Clear existing filters first
-    setSearchTerm("");
-    setSearchTags([]);
-    setFilters({
-      status: "",
-      budget: "",
-      source: "",
-      assignedTo: "",
-      createdBy: "",
-      dateRange: ""
-    });
-
-    // Apply new filters
+    // Apply new filters without clearing existing ones
     setFilters(prev => ({
       ...prev,
       ...quickFilters
     }));
 
-    // Apply search immediately
+    // Apply search immediately with new filters
     const newParams = { ...quickFilters };
     setActiveSearchParams(newParams);
     setIsSearchActive(true);
+
+    console.log('🔍 Quick filters applied:', newParams);
 
     return newParams;
   }, []);
@@ -283,6 +333,10 @@ export const useLeadSearch = () => {
     
     // Utilities
     getActiveFiltersSummary,
-    getBudgetRangeText
+    getBudgetRangeText,
+    
+    // Missing functions that were causing the error
+    setActiveSearchParams,
+    setIsSearchActive
   };
 };

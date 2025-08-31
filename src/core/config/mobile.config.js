@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 export const mobileConfig = {
   // API Configuration for mobile
   api: {
-    baseURL: Constants.expoConfig?.extra?.apiBaseUrl || 'http://192.168.1.26:8082',
+    baseURL: Constants.expoConfig?.extra?.apiBaseUrl || 'https://backend.leadstracker.in',
     timeout: 30000,
     retries: 3,
     headers: {

@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../shared/contexts/AuthContext';
 import { useDashboardStats } from '../../core/hooks/useDashboardStats';
+import { useDashboardEvents } from '../../core/hooks/useDashboardEvents';
+import { useTodayFollowUps } from '../../core/hooks/useTodayFollowUps';
 
 const DashboardStats = () => {
   const { user } = useAuth();
@@ -11,6 +13,54 @@ const DashboardStats = () => {
   const role = user?.role;
 
   const { stats, loading, error } = useDashboardStats(companyId, userId, role);
+  const { todayEvents, loading: eventsLoading, error: eventsError } = useDashboardEvents(companyId, userId, role);
+  const { todayFollowUps, loading: followUpsLoading, error: followUpsError } = useTodayFollowUps(companyId);
+
+  // Debug logging for leads data
+  console.log('🔍 DashboardStats Debug:', {
+    companyId,
+    userId,
+    role,
+    stats: {
+      totalLeads: stats?.totalLeads,
+      newLeads: stats?.newLeads,
+      contactedLeads: stats?.contactedLeads,
+    },
+    loading,
+    error
+  });
+
+  // Debug logging for follow-ups data
+  console.log('📞 FollowUps Debug:', {
+    todayFollowUps,
+    followUpsLoading,
+    followUpsError
+  });
+
+  // Function to handle phone number clicks
+  const handlePhoneNumberClick = (phoneNumber) => {
+    if (!phoneNumber || phoneNumber === 'No phone') {
+      Alert.alert('No Phone Number', 'This lead does not have a phone number.');
+      return;
+    }
+
+    Alert.alert(
+      'Call Lead',
+      `Do you want to call ${phoneNumber}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Call',
+          onPress: () => {
+            Linking.openURL(`tel:${phoneNumber}`);
+          },
+        },
+      ]
+    );
+  };
 
   if (!user || !userId || !role) {
     return (
@@ -90,14 +140,21 @@ const DashboardStats = () => {
           contactedLeads={stats?.contactedLeads}
         />
         <PropertyOverviewCard propertyOverview={stats?.propertyOverview} />
-        <DealsClosedCard dealsOverview={stats?.dealsOverview} />
-        {role !== 'USER' && (
-          <UsersAdminsOverviewCard usersOverview={stats?.usersOverview} />
-        )}
-      </View>
-    </View>
-  );
-};
+                 <DealsClosedCard dealsOverview={stats?.dealsOverview} />
+         {role !== 'USER' && (
+           <UsersAdminsOverviewCard usersOverview={stats?.usersOverview} />
+         )}
+                   <EventsCard events={todayEvents} loading={eventsLoading} error={eventsError} />
+          <FollowUpsCard 
+            followUps={todayFollowUps} 
+            loading={followUpsLoading} 
+            error={followUpsError}
+            onPhoneNumberClick={handlePhoneNumberClick}
+          />
+       </View>
+     </View>
+   );
+ };
 
 const StatCard = ({ title, count, icon, color }: {
   title: string;
@@ -156,10 +213,13 @@ const PropertyOverviewCard = ({ propertyOverview }: {
 }) => {
   if (!propertyOverview) {
     return (
-      <View style={[styles.statCard, { backgroundColor: '#10b981' }]}>
+      <View style={[styles.statCard, { backgroundColor: '#00b445' }]}>
         <View style={styles.statContent}>
-          <Text style={styles.statTitle}>Property Overview</Text>
-          <Text style={styles.statCount}>Loading...</Text>
+          <View style={styles.propertyHeader}>
+            <Text style={styles.propertyTitle}>Property Overview</Text>
+            <Ionicons name="business-outline" size={24} color="#d1fae5" />
+          </View>
+          <Text style={styles.propertyLoadingText}>Loading property data...</Text>
         </View>
       </View>
     );
@@ -174,18 +234,63 @@ const PropertyOverviewCard = ({ propertyOverview }: {
   } = propertyOverview;
 
   return (
-    <View style={[styles.statCard, { backgroundColor: '#10b981' }]}>
+    <View style={[styles.statCard, { backgroundColor: '#00b445' }]}>
       <View style={styles.statContent}>
-        <Text style={styles.statTitle}>Property Overview</Text>
-        <Text style={styles.statCount}>{totalProperties}</Text>
-        <View style={styles.propertyDetails}>
-          <View style={styles.propertyRow}>
-            <Text style={styles.propertyLabel}>For Sale: {availableForSale}</Text>
-            <Text style={styles.propertyLabel}>For Rent: {availableForRent}</Text>
+        {/* Header with title and building icon */}
+        <View style={styles.propertyHeader}>
+          <Text style={styles.propertyTitle}>Property Overview</Text>
+          <Ionicons name="business-outline" size={24} color="#d1fae5" />
+        </View>
+
+        {/* Total Properties section with border */}
+        <View style={styles.totalPropertiesSection}>
+          <View style={styles.totalPropertiesRow}>
+            <View style={styles.totalPropertiesLeft}>
+              <Ionicons name="business-outline" size={18} color="#d1fae5" />
+              <Text style={styles.totalPropertiesLabel}>Total</Text>
+            </View>
+            <Text style={styles.totalPropertiesCount}>{totalProperties}</Text>
           </View>
-          <View style={styles.propertyRow}>
-            <Text style={styles.propertyLabel}>Sold: {soldOut}</Text>
-            <Text style={styles.propertyLabel}>Rented: {rentOut}</Text>
+        </View>
+
+        {/* Two Column Layout for Sales and Rental */}
+        <View style={styles.propertyGrid}>
+          {/* Left Side - Available Properties */}
+          <View style={styles.propertyColumn}>
+            <View style={styles.propertyStat}>
+              <View style={styles.propertyStatHeader}>
+                <Ionicons name="home-outline" size={14} color="#d1fae5" />
+                <Text style={styles.propertyStatLabel}>Available for Sale</Text>
+              </View>
+              <Text style={styles.propertyStatCount}>{availableForSale}</Text>
+            </View>
+
+            <View style={styles.propertyStat}>
+              <View style={styles.propertyStatHeader}>
+                <Ionicons name="key-outline" size={14} color="#d1fae5" />
+                <Text style={styles.propertyStatLabel}>Available for Rent</Text>
+              </View>
+              <Text style={styles.propertyStatCount}>{availableForRent}</Text>
+            </View>
+          </View>
+
+          {/* Right Side - Completed Properties */}
+          <View style={styles.propertyColumn}>
+            <View style={styles.propertyStat}>
+              <View style={styles.propertyStatHeader}>
+                <Ionicons name="checkmark-circle-outline" size={14} color="#d1fae5" />
+                <Text style={styles.propertyStatLabel}>Sold Out</Text>
+              </View>
+              <Text style={styles.propertyStatCount}>{soldOut}</Text>
+            </View>
+
+            <View style={styles.propertyStat}>
+              <View style={styles.propertyStatHeader}>
+                <Ionicons name="checkmark-circle-outline" size={14} color="#d1fae5" />
+                <Text style={styles.propertyStatLabel}>Rent Out</Text>
+              </View>
+              <Text style={styles.propertyStatCount}>{rentOut}</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -198,10 +303,13 @@ const DealsClosedCard = ({ dealsOverview }: {
 }) => {
   if (!dealsOverview) {
     return (
-      <View style={[styles.statCard, { backgroundColor: '#8b5cf6' }]}>
+      <View style={[styles.statCard, { backgroundColor: '#863bff' }]}>
         <View style={styles.statContent}>
-          <Text style={styles.statTitle}>Deals Overview</Text>
-          <Text style={styles.statCount}>Loading...</Text>
+          <View style={styles.dealsHeader}>
+            <Text style={styles.dealsTitle}>Deals Overview</Text>
+            <Ionicons name="trending-up-outline" size={24} color="#e9d5ff" />
+          </View>
+          <Text style={styles.dealsLoadingText}>Loading deals data...</Text>
         </View>
       </View>
     );
@@ -214,14 +322,47 @@ const DealsClosedCard = ({ dealsOverview }: {
   } = dealsOverview;
 
   return (
-    <View style={[styles.statCard, { backgroundColor: '#8b5cf6' }]}>
+    <View style={[styles.statCard, { backgroundColor: '#863bff' }]}>
       <View style={styles.statContent}>
-        <Text style={styles.statTitle}>Deals Overview</Text>
-        <Text style={styles.statCount}>{totalClose}</Text>
-        <View style={styles.dealsDetails}>
-          <View style={styles.dealsRow}>
-            <Text style={styles.dealsLabel}>Closed: {closed}</Text>
-            <Text style={styles.dealsLabel}>Dropped: {dropped}</Text>
+        {/* Header with title and trend icon */}
+        <View style={styles.dealsHeader}>
+          <Text style={styles.dealsTitle}>Deals Overview</Text>
+          <Ionicons name="trending-up-outline" size={24} color="#e9d5ff" />
+        </View>
+
+        {/* Total Deals section with border */}
+        <View style={styles.totalDealsSection}>
+          <View style={styles.totalDealsRow}>
+            <View style={styles.totalDealsLeft}>
+              <Ionicons name="trending-up-outline" size={18} color="#e9d5ff" />
+              <Text style={styles.totalDealsLabel}>Total Deals</Text>
+            </View>
+            <Text style={styles.totalDealsCount}>{totalClose}</Text>
+          </View>
+        </View>
+
+        {/* Two Column Layout for Closed and Dropped */}
+        <View style={styles.dealsGrid}>
+          {/* Left Side - Closed Deals */}
+          <View style={styles.dealsColumn}>
+            <View style={styles.dealsStat}>
+              <View style={styles.dealsStatHeader}>
+                <Ionicons name="checkmark-circle-outline" size={14} color="#e9d5ff" />
+                <Text style={styles.dealsStatLabel}>Closed</Text>
+              </View>
+              <Text style={styles.dealsStatCount}>{closed}</Text>
+            </View>
+          </View>
+
+          {/* Right Side - Dropped Deals */}
+          <View style={styles.dealsColumn}>
+            <View style={styles.dealsStat}>
+              <View style={styles.dealsStatHeader}>
+                <Ionicons name="close-circle-outline" size={14} color="#e9d5ff" />
+                <Text style={styles.dealsStatLabel}>Dropped</Text>
+              </View>
+              <Text style={styles.dealsStatCount}>{dropped}</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -234,10 +375,13 @@ const UsersAdminsOverviewCard = ({ usersOverview }: {
 }) => {
   if (!usersOverview) {
     return (
-      <View style={[styles.statCard, { backgroundColor: '#f59e0b' }]}>
+      <View style={[styles.statCard, { backgroundColor: '#A12FFF' }]}>
         <View style={styles.statContent}>
-          <Text style={styles.statTitle}>Users & Admins</Text>
-          <Text style={styles.statCount}>Loading...</Text>
+          <View style={styles.usersHeader}>
+            <Text style={styles.usersTitle}>Users & Admins</Text>
+            <Ionicons name="people-outline" size={24} color="#e9d5ff" />
+          </View>
+          <Text style={styles.usersLoadingText}>Loading users data...</Text>
         </View>
       </View>
     );
@@ -250,22 +394,251 @@ const UsersAdminsOverviewCard = ({ usersOverview }: {
   } = usersOverview;
 
   return (
-    <View style={[styles.statCard, { backgroundColor: '#f59e0b' }]}>
+    <View style={[styles.statCard, { backgroundColor: '#A12FFF' }]}>
       <View style={styles.statContent}>
-        <Text style={styles.statTitle}>Users & Admins</Text>
-        <Text style={styles.statCount}>{totalUsers}</Text>
-        <View style={styles.usersDetails}>
-          <View style={styles.usersRow}>
-            <Text style={styles.usersLabel}>Active Users: {activeNormalUsers}</Text>
-            <Text style={styles.usersLabel}>Active Admins: {activeAdmins}</Text>
+        {/* Header with title and people icon */}
+        <View style={styles.usersHeader}>
+          <Text style={styles.usersTitle}>Users & Admins</Text>
+          <Ionicons name="people-outline" size={24} color="#e9d5ff" />
+        </View>
+
+        {/* Total Users section with border */}
+        <View style={styles.totalUsersSection}>
+          <View style={styles.totalUsersRow}>
+            <View style={styles.totalUsersLeft}>
+              <Ionicons name="people-outline" size={18} color="#e9d5ff" />
+              <Text style={styles.totalUsersLabel}>Total Users</Text>
+            </View>
+            <Text style={styles.totalUsersCount}>{totalUsers}</Text>
+          </View>
+        </View>
+
+        {/* Two Column Layout for Users and Admins */}
+        <View style={styles.usersGrid}>
+          {/* Left Side - Users */}
+          <View style={styles.usersColumn}>
+            <View style={styles.usersStat}>
+              <View style={styles.usersStatHeader}>
+                <Ionicons name="checkmark-circle-outline" size={14} color="#e9d5ff" />
+                <Text style={styles.usersStatLabel}>Active Users</Text>
+              </View>
+              <Text style={styles.usersStatCount}>{activeNormalUsers}</Text>
+            </View>
+
+            <View style={styles.usersStat}>
+              <View style={styles.usersStatHeader}>
+                <Ionicons name="people-outline" size={14} color="#e9d5ff" />
+                <Text style={styles.usersStatLabel}>Normal Users</Text>
+              </View>
+              <Text style={styles.usersStatCount}>{activeNormalUsers}</Text>
+            </View>
+          </View>
+
+          {/* Right Side - Admins */}
+          <View style={styles.usersColumn}>
+            <View style={styles.usersStat}>
+              <View style={styles.usersStatHeader}>
+                <Ionicons name="shield-outline" size={14} color="#e9d5ff" />
+                <Text style={styles.usersStatLabel}>Active Admins</Text>
+              </View>
+              <Text style={styles.usersStatCount}>{activeAdmins}</Text>
+            </View>
+
+            <View style={styles.usersStat}>
+              <View style={styles.usersStatHeader}>
+                <Ionicons name="shield-outline" size={14} color="#e9d5ff" />
+                <Text style={styles.usersStatLabel}>Total Admins</Text>
+              </View>
+              <Text style={styles.usersStatCount}>{activeAdmins}</Text>
+            </View>
           </View>
         </View>
       </View>
     </View>
+     );
+ };
+ 
+ const EventsCard = ({ events, loading, error }) => {
+  if (loading) {
+    return (
+      <View style={styles.eventsCard}>
+        <View style={styles.eventsHeader}>
+          <View style={styles.eventsTitleRow}>
+            <Ionicons name="calendar-outline" size={20} color="#1e40af" />
+            <Text style={styles.eventsTitle}>Your Events for Today</Text>
+          </View>
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading events...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.eventsCard}>
+        <View style={styles.eventsHeader}>
+          <View style={styles.eventsTitleRow}>
+            <Ionicons name="calendar-outline" size={20} color="#1e40af" />
+            <Text style={styles.eventsTitle}>Your Events for Today</Text>
+          </View>
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Failed to load events</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!events || events.length === 0) {
+    return (
+      <View style={styles.eventsCard}>
+        <View style={styles.eventsHeader}>
+          <View style={styles.eventsTitleRow}>
+            <Ionicons name="calendar-outline" size={20} color="#1e40af" />
+            <Text style={styles.eventsTitle}>Your Events for Today</Text>
+          </View>
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No events for today</Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.eventsCard}>
+      <View style={styles.eventsHeader}>
+        <View style={styles.eventsTitleRow}>
+          <Ionicons name="calendar-outline" size={20} color="#1e40af" />
+          <Text style={styles.eventsTitle}>Your Events for Today</Text>
+        </View>
+      </View>
+      
+      <View style={styles.eventsList}>
+        {events.map((event, index) => (
+          <View key={index} style={styles.eventItem}>
+            <View style={styles.eventContent}>
+              <Text style={styles.eventTitle}>{event.content}</Text>
+              <Text style={styles.eventTime}>
+                {new Date(event.dateTime).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit',
+                  hour12: false 
+                })}
+              </Text>
+            </View>
+            <View style={styles.eventCreator}>
+              <Ionicons name="person-outline" size={16} color="#6b7280" />
+              <Text style={styles.eventCreatorText}>{event.username}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
   );
 };
+ 
+ const FollowUpsCard = ({ followUps, loading, error, onPhoneNumberClick }) => {
+  if (loading) {
+    return (
+      <View style={styles.followUpsCard}>
+        <View style={styles.followUpsHeader}>
+          <View style={styles.followUpsTitleRow}>
+            <Ionicons name="time-outline" size={20} color="#059669" />
+            <Text style={styles.followUpsTitle}>Today's Follow-ups</Text>
+          </View>
+   
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading follow-ups...</Text>
+        </View>
+      </View>
+    );
+  }
 
-const styles = StyleSheet.create({
+  if (error) {
+    return (
+      <View style={styles.followUpsCard}>
+        <View style={styles.followUpsHeader}>
+          <View style={styles.followUpsTitleRow}>
+            <Ionicons name="time-outline" size={20} color="#059669" />
+            <Text style={styles.followUpsTitle}>Today's Follow-ups</Text>
+          </View>
+  
+        </View>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Failed to load follow-ups</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!followUps || followUps.length === 0) {
+    return (
+      <View style={styles.followUpsCard}>
+        <View style={styles.followUpsHeader}>
+          <View style={styles.followUpsTitleRow}>
+            <Ionicons name="time-outline" size={20} color="#059669" />
+            <Text style={styles.followUpsTitle}>Today's Follow-ups</Text>
+          </View>
+          
+        </View>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No follow-ups for today</Text>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.followUpsCard}>
+      <View style={styles.followUpsHeader}>
+        <View style={styles.followUpsTitleRow}>
+          <Ionicons name="time-outline" size={20} color="#059669" />
+          <Text style={styles.followUpsTitle}>Today's Follow-ups</Text>
+        </View>
+        
+      </View>
+      
+             <View style={styles.followUpsList}>
+         {followUps.map((followUp, index) => {
+           // Debug logging for individual follow-up
+           console.log(`📞 FollowUp ${index}:`, followUp);
+           
+           return (
+             <View key={index} style={styles.followUpItem}>
+                         <View style={styles.followUpLead}>
+               <Text style={styles.followUpLeadName}>{followUp.lead?.name || followUp.leadName || 'Unknown Lead'}</Text>
+               <TouchableOpacity onPress={() => onPhoneNumberClick(followUp.lead?.phone || followUp.leadPhone)}>
+                 <Text style={[styles.followUpLeadPhone, styles.clickablePhone]}>
+                   {followUp.lead?.phone || followUp.leadPhone || 'No phone'}
+                 </Text>
+               </TouchableOpacity>
+             </View>
+            <View style={styles.followUpNote}>
+              <Text style={styles.followUpNoteText}>{followUp.note || 'No note'}</Text>
+            </View>
+                         <View style={styles.followUpTime}>
+               <Ionicons name="time-outline" size={16} color="#059669" />
+               <Text style={styles.followUpTimeText}>
+                 {new Date(followUp.followupDate).toLocaleTimeString('en-US', { 
+                   hour: '2-digit', 
+                   minute: '2-digit',
+                   hour12: false 
+                 })}
+               </Text>
+             </View>
+           </View>
+         );
+       })}
+       </View>
+    </View>
+  );
+};
+ 
+ const styles = StyleSheet.create({
   container: {
     padding: 20,
     paddingTop: 24,
@@ -400,6 +773,390 @@ const styles = StyleSheet.create({
     backgroundColor: '#e5e7eb',
     borderRadius: 16,
   },
-});
+  // Enhanced PropertyOverviewCard styles
+  propertyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  propertyTitle: {
+    color: '#d1fae5',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  propertyLoadingText: {
+    color: '#d1fae5',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 32,
+  },
+  totalPropertiesSection: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#00994a',
+    paddingBottom: 16,
+    marginBottom: 16,
+  },
+  totalPropertiesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalPropertiesLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  totalPropertiesLabel: {
+    color: '#d1fae5',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  totalPropertiesCount: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  propertyGrid: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  propertyColumn: {
+    flex: 1,
+    gap: 12,
+  },
+  propertyStat: {
+    alignItems: 'center',
+  },
+  propertyStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  propertyStatLabel: {
+    color: '#d1fae5',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  propertyStatCount: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  // Enhanced DealsClosedCard styles
+  dealsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dealsTitle: {
+    color: '#e9d5ff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  dealsLoadingText: {
+    color: '#e9d5ff',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 32,
+  },
+  totalDealsSection: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#c084fc',
+    paddingBottom: 16,
+    marginBottom: 16,
+  },
+  totalDealsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalDealsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  totalDealsLabel: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  totalDealsCount: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  dealsGrid: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  dealsColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  dealsStat: {
+    alignItems: 'center',
+  },
+  dealsStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  dealsStatLabel: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  dealsStatCount: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  // Enhanced UsersAdminsOverviewCard styles
+  usersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  usersTitle: {
+    color: '#e9d5ff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  usersLoadingText: {
+    color: '#e9d5ff',
+    fontSize: 14,
+    textAlign: 'center',
+    paddingVertical: 32,
+  },
+  totalUsersSection: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#c084fc',
+    paddingBottom: 16,
+    marginBottom: 16,
+  },
+  totalUsersRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalUsersLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  totalUsersLabel: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  totalUsersCount: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  usersGrid: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  usersColumn: {
+    flex: 1,
+    gap: 12,
+  },
+  usersStat: {
+    alignItems: 'center',
+  },
+  usersStatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  usersStatLabel: {
+    color: '#e9d5ff',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+     usersStatCount: {
+     color: '#ffffff',
+     fontSize: 20,
+     fontWeight: 'bold',
+   },
+       // Events and Follow-ups Cards styles
+    eventsCard: {
+      backgroundColor: '#ffffff',
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    eventsHeader: {
+      marginBottom: 16,
+    },
+    eventsTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    eventsTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: '#1f2937',
+    },
+    eventsList: {
+      gap: 12,
+    },
+    eventItem: {
+      backgroundColor: '#f8fafc',
+      borderRadius: 8,
+      padding: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: '#1e40af',
+    },
+    eventContent: {
+      marginBottom: 8,
+    },
+    eventTitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#1f2937',
+      marginBottom: 4,
+    },
+    eventTime: {
+      fontSize: 14,
+      color: '#6b7280',
+    },
+    eventCreator: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    eventCreatorText: {
+      fontSize: 14,
+      color: '#6b7280',
+    },
+    followUpsCard: {
+      backgroundColor: '#ffffff',
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 3.84,
+      elevation: 5,
+    },
+    followUpsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 16,
+    },
+    followUpsTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    followUpsTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: '#1f2937',
+    },
+    autoNotificationsButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: '#fef3c7',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: '#f59e0b',
+    },
+    autoNotificationsText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#92400e',
+    },
+    followUpsList: {
+      gap: 12,
+    },
+    followUpItem: {
+      backgroundColor: '#f0fdf4',
+      borderRadius: 8,
+      padding: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: '#059669',
+    },
+    followUpLead: {
+      marginBottom: 8,
+    },
+    followUpLeadName: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: '#1f2937',
+      marginBottom: 2,
+    },
+    followUpLeadPhone: {
+      fontSize: 14,
+      color: '#6b7280',
+    },
+    followUpNote: {
+      marginBottom: 8,
+    },
+    followUpNoteText: {
+      fontSize: 14,
+      color: '#374151',
+      fontStyle: 'italic',
+    },
+    followUpTime: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+         followUpTimeText: {
+       fontSize: 14,
+       color: '#059669',
+       fontWeight: '500',
+     },
+     // Loading, Error, and Empty state styles
+     loadingContainer: {
+       alignItems: 'center',
+       paddingVertical: 20,
+     },
+     loadingText: {
+       fontSize: 14,
+       color: '#6b7280',
+       fontStyle: 'italic',
+     },
+     errorContainer: {
+       alignItems: 'center',
+       paddingVertical: 20,
+     },
+     errorText: {
+       fontSize: 14,
+       color: '#ef4444',
+       fontStyle: 'italic',
+     },
+     emptyContainer: {
+       alignItems: 'center',
+       paddingVertical: 20,
+     },
+     emptyText: {
+       fontSize: 14,
+       color: '#6b7280',
+       fontStyle: 'italic',
+     },
+     clickablePhone: {
+       textDecorationLine: 'underline',
+       color: '#059669',
+     },
+ });
 
 export default DashboardStats;

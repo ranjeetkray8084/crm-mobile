@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, RefreshControl, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/shared/contexts/AuthContext';
 import { useTasks } from '../../src/core/hooks/useTasks';
@@ -7,11 +7,13 @@ import TaskCard from '../../src/components/tasks/TaskCard';
 import TaskUploadForm from '../../src/components/tasks/TaskUploadForm';
 import TabScreenWrapper from '../../src/components/common/TabScreenWrapper';
 import { useRouter, useFocusEffect } from 'expo-router';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 
 export default function TasksScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [showUploadForm, setShowUploadForm] = useState(true); // Default to true to show form
   const [refreshing, setRefreshing] = useState(false);
 
   const companyId = user?.companyId;
@@ -49,12 +51,12 @@ export default function TasksScreen() {
     }
   }, [error, clearError]);
 
-  // Reset showUploadForm when screen comes back into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      setShowUploadForm(false);
-    }, [])
-  );
+  // Keep upload form state when screen comes into focus
+  // useFocusEffect(
+  //   React.useCallback(() => {
+  //     setShowUploadForm(false);
+  //   }, [])
+  // );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -66,56 +68,109 @@ export default function TasksScreen() {
     try {
       console.log('TasksScreen: handleAddAction called with actionId:', actionId);
       
-      let targetRoute: string;
-      
-      switch (actionId) {
-        case 'User':
-          targetRoute = '/add?action=User';
-          break;
-        case 'Lead':
-          targetRoute = '/add?action=Lead';
-          break;
-        case 'Properties':
-          targetRoute = '/add?action=Properties';
-          break;
-        case 'Notes':
-          targetRoute = '/add?action=Notes';
-          break;
-        case 'Task':
-          targetRoute = '/add?action=Task';
-          break;
-        default:
-          targetRoute = '/add';
-          break;
-      }
-
-      router.push(targetRoute);
+      // Add screen has been removed - show alert instead
+      Alert.alert(
+        'Feature Unavailable',
+        'The Quick Add feature has been removed. Please use the individual section forms instead.',
+        [{ text: 'OK' }]
+      );
     } catch (error) {
       console.error('TasksScreen: handleAddAction error:', error);
     }
   };
 
   const handleOpen = (taskId: string) => {
-    // For now, just show an alert. You can implement a preview modal later
-    Alert.alert('Preview Task', `Opening task: ${taskId}`);
+    // The TaskPreviewModal is already integrated in TaskCard component
+    // This function is called when the preview button is clicked
+    // The modal will be shown automatically by the TaskCard component
+    console.log('Opening task preview for taskId:', taskId);
   };
 
   const handleDownload = async (taskId: string) => {
     try {
+      // Show loading alert
+      Alert.alert('Downloading', 'Please wait while we download your file...', [], { cancelable: false });
+      
       const result = await downloadExcelFile(taskId);
-      if (result.success) {
-        Alert.alert('Success', 'File downloaded successfully!');
+      
+      if (result.success && result.data) {
+        try {
+          // Validate the data
+          if (result.data.length < 100) {
+            throw new Error('Downloaded data seems too small to be a valid Excel file');
+          }
+          
+          // Try to save to Downloads folder first (Android)
+          let fileUri;
+          try {
+            if (Platform.OS === 'android') {
+              // Try to save to Downloads folder
+              const downloadsDir = FileSystem.documentDirectory + 'Downloads/';
+              await FileSystem.makeDirectoryAsync(downloadsDir, { intermediates: true });
+              fileUri = downloadsDir + result.fileName;
+            } else {
+              // For iOS, use app documents directory
+              fileUri = FileSystem.documentDirectory + result.fileName;
+            }
+          } catch (dirError) {
+            // Fallback to app documents directory
+            fileUri = FileSystem.documentDirectory + result.fileName;
+          }
+          
+          // Write the base64 data to the file
+          await FileSystem.writeAsStringAsync(fileUri, result.data, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          
+          // Check if sharing is available
+          const isAvailable = await Sharing.isAvailableAsync();
+          
+          if (isAvailable) {
+            // Share the file
+            await Sharing.shareAsync(fileUri, {
+              mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              dialogTitle: 'Download Task File',
+            });
+            
+            Alert.alert(
+              'Download Successful! 📱', 
+              'File has been saved to your phone and is ready to share. You can now:\n\n' +
+              '• Save it to your Downloads folder\n' +
+              '• Share via email, WhatsApp, etc.\n' +
+              '• Open with Excel or other apps'
+            );
+          } else {
+            // If sharing is not available, just show success message
+            Alert.alert(
+              'Download Successful! 📱', 
+              `File has been saved to your phone at:\n${fileUri}\n\n` +
+              'You can find it in your phone\'s file manager or app documents folder.'
+            );
+          }
+          
+        } catch (fileError: any) {
+          Alert.alert('Error', `Failed to save file to device: ${fileError?.message || 'Unknown error'}`);
+        }
       } else {
-        Alert.alert('Error', result.error || 'Failed to download file');
+        const errorMessage = result.error || 'Failed to download file';
+        Alert.alert('Download Failed', errorMessage);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to download file');
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to download file: ${error?.message || 'Unknown error'}`);
     }
   };
 
-  const handleAssign = (taskId: string) => {
-    // For now, just show an alert. You can implement a user selection modal later
-    Alert.alert('Assign Task', `Assigning task: ${taskId}`);
+  const handleAssign = async (taskId: string, userId: string) => {
+    try {
+      const result = await assignTask(taskId, userId);
+      if (result.success) {
+        Alert.alert('Success', 'Task assigned successfully!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to assign task');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to assign task');
+    }
   };
 
   const handleUnassign = async (taskId: string) => {
@@ -209,6 +264,16 @@ export default function TasksScreen() {
               <Text style={styles.title}>Task Management</Text>
             </View>
             
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowUploadForm(!showUploadForm)}
+            >
+              <Ionicons 
+                name={showUploadForm ? "close" : "add"} 
+                size={24} 
+                color="#fff" 
+              />
+            </TouchableOpacity>
           </View>
         
         {!showUploadForm && (
@@ -238,6 +303,16 @@ export default function TasksScreen() {
           </View>
         )}
       </View>
+
+      {/* Download Info */}
+      {!showUploadForm && (
+        <View style={styles.infoContainer}>
+          <Ionicons name="information-circle" size={20} color="#3b82f6" />
+          <Text style={styles.infoText}>
+            📱 Files are downloaded to your PHONE, not your computer. Use the share button to save to Downloads or share via other apps.
+          </Text>
+        </View>
+      )}
 
       {/* Upload Form */}
       {showUploadForm && (
@@ -288,15 +363,25 @@ export default function TasksScreen() {
               onDelete={handleDelete}
               onStatusUpdate={handleStatusUpdate}
               role={role}
+              companyId={companyId}
+              currentUserId={userId}
               canManageTask={canManageTask}
               isTaskAssignedToUser={isTaskAssignedToUser}
+              loading={loading}
             />
           ))
         )}
       </ScrollView>
       
       {/* Floating Action Button */}
-    
+      {!showUploadForm && (
+        <TouchableOpacity
+          style={styles.floatingActionButton}
+          onPress={() => setShowUploadForm(true)}
+        >
+          <Ionicons name="add" size={24} color="#fff" />
+        </TouchableOpacity>
+      )}
       </View>
     </TabScreenWrapper>
   );
@@ -322,6 +407,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+
+  infoContainer: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#3b82f6',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1e40af',
+    lineHeight: 18,
   },
   titleContainer: {
     flexDirection: 'row',
@@ -440,5 +544,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
+  },
+  floatingActionButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#1c69ff',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
 });

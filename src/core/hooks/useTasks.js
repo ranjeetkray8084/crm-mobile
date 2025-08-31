@@ -1,5 +1,5 @@
 // useTasks Hook - Mobile-optimized version for React Native/Expo
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import TaskService from '../services/task.service';
 
 export const useTasks = (companyId, userId, role) => {
@@ -310,6 +310,90 @@ export const useTasks = (companyId, userId, role) => {
     }
   }, [companyId]);
 
+  // Update Excel cell
+  const updateCell = useCallback(async (taskId, row, col, newValue) => {
+    if (!companyId) {
+      return { success: false, error: 'Company ID is required' };
+    }
+
+    try {
+      const result = await TaskService.updateCell(taskId, companyId, row, col, newValue);
+      return result;
+    } catch (error) {
+      return { success: false, error: 'Failed to update cell' };
+    }
+  }, [companyId]);
+
+  // Preview Excel
+  const previewExcel = useCallback(async (taskId) => {
+    if (!companyId) {
+      return { success: false, error: 'Company ID is required' };
+    }
+
+    try {
+      const result = await TaskService.previewExcel(taskId, companyId);
+      return result;
+    } catch (error) {
+      return { success: false, error: 'Failed to preview Excel' };
+    }
+  }, [companyId]);
+
+  // Add new row
+  const addNewRow = useCallback(async (taskId) => {
+    if (!companyId) {
+      return { success: false, error: 'Company ID is required' };
+    }
+
+    try {
+      const result = await TaskService.addNewRow(taskId, companyId);
+      return result;
+    } catch (error) {
+      return { success: false, error: 'Failed to add new row' };
+    }
+  }, [companyId]);
+
+  // Add new column
+  const addNewColumn = useCallback(async (taskId) => {
+    if (!companyId) {
+      return { success: false, error: 'Company ID is required' };
+    }
+
+    try {
+      const result = await TaskService.addNewColumn(taskId, companyId);
+      return result;
+    } catch (error) {
+      return { success: false, error: 'Failed to add new column' };
+    }
+  }, [companyId]);
+
+  // Delete selected columns
+  const deleteSelectedColumns = useCallback(async (taskId, columnIndices) => {
+    if (!companyId) {
+      return { success: false, error: 'Company ID is required' };
+    }
+
+    try {
+      const result = await TaskService.deleteSelectedColumns(taskId, companyId, columnIndices);
+      return result;
+    } catch (error) {
+      return { success: false, error: 'Failed to delete selected columns' };
+    }
+  }, [companyId]);
+
+  // Undo last action
+  const undoLastAction = useCallback(async (taskId) => {
+    if (!companyId) {
+      return { success: false, error: 'Company ID is required' };
+    }
+
+    try {
+      const result = await TaskService.undoLastAction(taskId, companyId);
+      return result;
+    } catch (error) {
+      return { success: false, error: 'Failed to undo last action' };
+    }
+  }, [companyId]);
+
   // Load tasks when component mounts or dependencies change
   useEffect(() => {
     if (companyId && role) {
@@ -362,6 +446,12 @@ export const useTasks = (companyId, userId, role) => {
     deleteTask,
     uploadExcelFile,
     downloadExcelFile,
+    updateCell,
+    previewExcel,
+    addNewRow,
+    addNewColumn,
+    deleteSelectedColumns,
+    undoLastAction,
     canManageTask,
     isTaskAssignedToUser,
     clearError

@@ -9,6 +9,7 @@ export interface Lead {
   requirement?: string;
   location?: string;
   source: string;
+  referenceName?: string;
   createdAt: string;
   assignedTo?: {
     name: string;

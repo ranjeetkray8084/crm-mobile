@@ -178,10 +178,10 @@ export class PropertyService {
 
   static async searchProperties(companyId, searchParams = {}, pageable = {}) {
     try {
-      // Check if token exists - use AsyncStorage for React Native
+      // Check if token exists - use same key as axios interceptor
       let token;
       try {
-        token = await AsyncStorage.getItem('crm_token');
+        token = await AsyncStorage.getItem('token'); // Changed from 'crm_token' to 'token'
       } catch (storageError) {
         console.warn('Failed to get token from storage:', storageError);
       }

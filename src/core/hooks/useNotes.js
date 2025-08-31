@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NoteService } from '../services/note.service';
 import { customAlert } from '../utils/alertUtils';
 import axios from '../../legacy/api/axios';
@@ -227,12 +227,13 @@ export const useNotes = (companyId, userId, role) => {
         'Failed to fetch note',
         false
       ),
-    getRemarksByNoteId: (noteId) =>
+    getRemarksByNoteId: useCallback((noteId) =>
       executeNoteAction(
         () => NoteService.getRemarksByNoteId(companyId, noteId),
         null,
         'Failed to fetch remarks',
         false
       ),
+    [companyId]),
   };
 };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ThreeDotMenu from '../common/ThreeDotMenu';
 
 interface NotesToolbarProps {
   searchTerm: string;
@@ -8,8 +9,10 @@ interface NotesToolbarProps {
   onToggleFilters: () => void;
   onAddNote: () => void;
   notesCount: number;
-  hasActiveFilters: boolean;
-  onClearFilters: () => void;
+  showFilters: boolean;
+  currentPage?: number;
+  totalPages?: number;
+  pageSize?: number;
 }
 
 const NotesToolbar: React.FC<NotesToolbarProps> = ({
@@ -18,96 +21,131 @@ const NotesToolbar: React.FC<NotesToolbarProps> = ({
   onToggleFilters,
   onAddNote,
   notesCount,
-  hasActiveFilters,
-  onClearFilters,
+  showFilters,
+  currentPage = 0,
+  totalPages = 1,
+  pageSize = 10,
 }) => {
+  const fromResult = currentPage * pageSize + 1;
+  const toResult = Math.min((currentPage + 1) * pageSize, notesCount);
+  
+  const actions = [
+    {
+      label: 'Add Note',
+      icon: <Ionicons name="add" size={14} color="#6b7280" />,
+      onClick: onAddNote
+    },
+    {
+      label: 'Add Event',
+      icon: <Ionicons name="calendar" size={14} color="#6b7280" />,
+      onClick: onAddNote
+    }
+  ];
+  
   return (
-    <View style={styles.toolbar}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Notes Management</Text>
-        <Text style={styles.subtitle}>{notesCount} note{notesCount !== 1 ? 's' : ''}</Text>
+        <View style={styles.titleSection}>
+          <Text style={styles.title}>Notes & Events</Text>
+        </View>
       </View>
 
       {/* Search and Actions Row */}
-      <View style={styles.actionsRow}>
+      <View style={styles.searchSection}>
         {/* Search Input */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#6b7280" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search notes..."
+            placeholder="Search notes & events..."
             value={searchTerm}
             onChangeText={onSearchChange}
             placeholderTextColor="#9ca3af"
           />
           {searchTerm.length > 0 && (
-            <TouchableOpacity onPress={() => onSearchChange('')} style={styles.clearSearch}>
+            <TouchableOpacity onPress={() => onSearchChange('')} style={styles.clearSearchButton}>
               <Ionicons name="close-circle" size={20} color="#6b7280" />
             </TouchableOpacity>
           )}
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.buttonGroup}>
-          <TouchableOpacity 
-            style={[styles.toolbarButton, styles.filterButton]} 
-            onPress={onToggleFilters}
-          >
-            <Ionicons name="filter" size={20} color="#1c69ff" />
-            <Text style={styles.filterButtonText}>Filters</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.toolbarButton, styles.addButton]} 
-            onPress={onAddNote}
-          >
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.addButtonText}>Add Note</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          style={[styles.filterToggleButton, showFilters && styles.filterToggleButtonActive]} 
+          onPress={onToggleFilters}
+        >
+          <Ionicons name="filter" size={20} color={showFilters ? "#fff" : "#1c69ff"} />
+        </TouchableOpacity>
       </View>
-
-      {/* Active Filters Indicator */}
-      {hasActiveFilters && (
-        <View style={styles.filtersIndicator}>
-          <View style={styles.filtersInfo}>
-            <Ionicons name="information-circle" size={16} color="#1c69ff" />
-            <Text style={styles.filtersText}>Filters are active</Text>
-          </View>
-          <TouchableOpacity onPress={onClearFilters} style={styles.clearFiltersButton}>
-            <Text style={styles.clearFiltersText}>Clear All</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  toolbar: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+  container: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   header: {
-    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  titleSection: {
+    flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1e293b',
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
+    fontSize: 14,
+    color: '#64748b',
+    lineHeight: 20,
   },
-  actionsRow: {
+  subtitleNote: {
+    color: '#9ca3af',
+  },
+  pageInfo: {
+    color: '#3b82f6',
+    fontWeight: '500',
+  },
+  headerActions: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
-    marginBottom: 12,
+  },
+  addNoteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#10b981',
+    gap: 6,
+  },
+  addNoteButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  searchSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 12,
   },
   searchContainer: {
     flex: 1,
@@ -124,74 +162,23 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: 44,
     fontSize: 16,
-    color: '#1f2937',
+    color: '#1e293b',
+    paddingVertical: 12,
   },
-  clearSearch: {
+  clearSearchButton: {
     padding: 4,
   },
-  buttonGroup: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  toolbarButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 6,
-  },
-  filterButton: {
-    borderColor: '#1c69ff',
-    backgroundColor: '#f0f9ff',
-  },
-  filterButtonText: {
-    color: '#1c69ff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  addButton: {
-    borderColor: '#1c69ff',
-    backgroundColor: '#1c69ff',
-  },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  filtersIndicator: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#f0f9ff',
+  filterToggleButton: {
     padding: 12,
+    backgroundColor: '#f8fafc',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#1c69ff',
+    borderColor: '#e2e8f0',
   },
-  filtersInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  filtersText: {
-    color: '#1c69ff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  clearFiltersButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#1c69ff',
-    borderRadius: 6,
-  },
-  clearFiltersText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '500',
+  filterToggleButtonActive: {
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
   },
 });
 

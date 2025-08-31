@@ -7,3 +7,9 @@ export { default as ThreeDotMenu } from './ThreeDotMenu';
 export { default as ConfirmModal } from './ConfirmModal';
 export { default as FloatingActionButton } from './FloatingActionButton';
 export { default as TabScreenWrapper } from './TabScreenWrapper';
+
+// Remark Components
+export { default as RemarkCard } from './RemarkCard';
+export { default as RemarksList } from './RemarksList';
+export { default as UnifiedRemarksModal } from './UnifiedRemarksModal';
+export { default as UnifiedAddRemarkModal } from './UnifiedAddRemarkModal';

@@ -27,17 +27,20 @@ const AddLeadForm: React.FC<AddLeadFormProps> = ({ onSuccess, onCancel }) => {
   const [showReferenceField, setShowReferenceField] = useState(false);
   const [companyId, setCompanyId] = useState<string>('');
   const [userId, setUserId] = useState<string>('');
+  const [userRole, setUserRole] = useState<string>('');
 
-  const { createLead } = useLeads(companyId, userId, '');
+  // Use the useLeads hook with proper user information
+  const { createLead } = useLeads(companyId, userId, userRole);
 
   useEffect(() => {
     const loadUserInfo = async () => {
       try {
-        const userData = await AsyncStorage.getItem('crm_user');
+        const userData = await AsyncStorage.getItem('user');
         if (userData) {
           const user = JSON.parse(userData);
           setCompanyId(user.companyId?.toString() || '');
           setUserId(user.userId?.toString() || user.id?.toString() || '');
+          setUserRole(user.role || '');
         }
       } catch (error) {
         console.error('Error loading user info:', error);
@@ -106,9 +109,21 @@ const AddLeadForm: React.FC<AddLeadFormProps> = ({ onSuccess, onCancel }) => {
       return;
     }
 
+    // Check if we have the required user information
+    if (!companyId) {
+      Alert.alert('Error', 'Company ID not found. Please login again.');
+      return;
+    }
+
+    if (!userId) {
+      Alert.alert('Error', 'User ID not found. Please login again.');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Use the exact structure from the working CRM frontend
       const leadData = {
         name: formData.name.trim(),
         email: formData.email.trim() || null,
@@ -119,12 +134,16 @@ const AddLeadForm: React.FC<AddLeadFormProps> = ({ onSuccess, onCancel }) => {
         budget: formData.budget.trim() || null,
         location: formData.location.trim() || null,
         requirement: getFinalRequirement(),
-        createdBy: { userId },
+        createdBy: { userId: parseInt(userId, 10) }, // Ensure userId is a number
       };
+
+      console.log('🔍 Creating lead with data:', leadData);
+      console.log('🔍 User info:', { companyId, userId, userRole });
 
       const result = await createLead(leadData);
 
-      if (result.success) {
+      if (result && typeof result === 'object' && 'success' in result && result.success) {
+        Alert.alert('Success', 'Lead created successfully!');
         setFormData({
           name: '',
           email: '',
@@ -138,8 +157,12 @@ const AddLeadForm: React.FC<AddLeadFormProps> = ({ onSuccess, onCancel }) => {
           additionalRequirements: '',
         });
         onSuccess();
+      } else {
+        const errorMessage = result && typeof result === 'object' && 'error' in result ? String(result.error) : 'Failed to create lead';
+        Alert.alert('Error', errorMessage);
       }
     } catch (err: any) {
+      console.error('❌ Error creating lead:', err);
       Alert.alert('Error', 'Error saving lead: ' + err.message);
     } finally {
       setLoading(false);

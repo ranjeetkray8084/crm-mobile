@@ -9,15 +9,29 @@ interface AuthGuardProps {
 }
 
 export default function AuthGuard({ children }: AuthGuardProps) {
-  const { user, isAuthenticated, loading } = useAuth();
+  const auth = useAuth();
   const [isChecking, setIsChecking] = useState(true);
   const router = useRouter();
+
+  // Check if auth context is available
+  const isContextAvailable = auth && auth.error !== 'Auth context not available';
+  const { user, isAuthenticated, loading } = auth;
 
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
         console.log('AuthGuard: Checking authentication status...');
         console.log('AuthGuard: useAuth state - user:', !!user, 'isAuthenticated:', isAuthenticated, 'loading:', loading);
+        console.log('AuthGuard: Context available:', isContextAvailable);
+        
+        // If context is not available, wait a bit and try again
+        if (!isContextAvailable) {
+          console.log('AuthGuard: Context not available, waiting...');
+          setTimeout(() => {
+            setIsChecking(false);
+          }, 1000);
+          return;
+        }
         
         // Wait for useAuth to finish initializing
         if (loading) {
@@ -52,19 +66,24 @@ export default function AuthGuard({ children }: AuthGuardProps) {
       }
     };
 
-    // Only check auth status when not loading and we have user data
-    if (!loading && (user || isAuthenticated)) {
+    // Only check auth status when context is available and not loading
+    if (isContextAvailable && !loading && (user || isAuthenticated)) {
       checkAuthStatus();
-    } else if (!loading && !user && !isAuthenticated) {
+    } else if (isContextAvailable && !loading && !user && !isAuthenticated) {
       // No authentication, redirect to login
       console.log('AuthGuard: No authentication, redirecting to login');
       router.replace('/login');
       setIsChecking(false);
+    } else if (!isContextAvailable) {
+      // Context not available, wait
+      setTimeout(() => {
+        setIsChecking(false);
+      }, 1000);
     }
-  }, [loading, user, isAuthenticated, router]);
+  }, [loading, user, isAuthenticated, router, isContextAvailable]);
 
-  // Show loading while checking authentication
-  if (loading || isChecking) {
+  // Show loading while checking authentication or if context is not available
+  if (loading || isChecking || !isContextAvailable) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1c69ff" />

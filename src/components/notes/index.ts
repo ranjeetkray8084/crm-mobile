@@ -1,8 +1,12 @@
 export { default as NotesSection } from './NotesSection';
 export { default as NotesList } from './NotesList';
-export { default as NoteCard } from './NoteCard';
 export { default as NotesToolbar } from './NotesToolbar';
 export { default as NotesFilters } from './NotesFilters';
+export { default as NoteCard } from './NoteCard';
+export { default as NotesDemo } from './NotesDemo';
+export { default as NoteActions } from './NoteActions';
+export { default as NoteDetails } from './NoteDetails';
+export { default as NoteActionMenu } from './NoteActionMenu';
 export { default as AddNoteModal } from './modals/AddNoteModal';
 export { default as EditNoteModal } from './modals/EditNoteModal';
 export { default as AddRemarkModal } from './modals/AddRemarkModal';

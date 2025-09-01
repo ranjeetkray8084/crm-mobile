@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 
+	This is a placeholder GoogleService-Info.plist file.
+	
+	To get the actual Firebase configuration for iOS:
+	
+	1. Go to Firebase Console: https://console.firebase.google.com/
+	2. Select your project (leadstracker)
+	3. Click on the iOS icon (+ Add app)
+	4. Enter Bundle ID: com.ranjeet1620.crmnativeexpo
+	5. Download the GoogleService-Info.plist file
+	6. Replace this placeholder file with the downloaded one
+	
+	The actual file will contain:
+	- API_KEY
+	- GCM_SENDER_ID
+	- PLIST_VERSION
+	- BUNDLE_ID
+	- PROJECT_ID
+	- STORAGE_BUCKET
+	- IS_ADS_ENABLED
+	- IS_ANALYTICS_ENABLED
+	- IS_APPINVITE_ENABLED
+	- IS_GCM_ENABLED
+	- IS_SIGNIN_ENABLED
+	- GOOGLE_APP_ID
+	-->
+	
+	<key>API_KEY</key>
+	<string>YOUR_IOS_API_KEY_HERE</string>
+	
+	<key>GCM_SENDER_ID</key>
+	<string>YOUR_GCM_SENDER_ID_HERE</string>
+	
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	
+	<key>BUNDLE_ID</key>
+	<string>com.ranjeet1620.crmnativeexpo</string>
+	
+	<key>PROJECT_ID</key>
+	<string>leadstracker</string>
+	
+	<key>STORAGE_BUCKET</key>
+	<string>leadstracker.appspot.com</string>
+	
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	
+	<key>IS_ANALYTICS_ENABLED</key>
+	<true></true>
+	
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	
+	<key>GOOGLE_APP_ID</key>
+	<string>YOUR_GOOGLE_APP_ID_HERE</string>
+</dict>
+</plist>

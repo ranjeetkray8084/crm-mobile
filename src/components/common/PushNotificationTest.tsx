@@ -1,230 +1,446 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Platform,
+  Linking,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApiBaseUrl, API_ENDPOINTS } from '../../core/config/api.config';
 import { useNotifications } from '../../shared/contexts/NotificationContext';
+import NotificationService from '../../core/services/NotificationService';
+import TokenRegistrationService from '../../core/services/TokenRegistrationService';
+import { getApiBaseUrl, API_ENDPOINTS } from '../../core/config/api.config';
 
 export const PushNotificationTest: React.FC = () => {
-  const { sendImmediateNotification, scheduleNotification } = useNotifications();
+  const [pushToken, setPushToken] = useState<string | null>(null);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [testResults, setTestResults] = useState<string[]>([]);
+  const [deviceInfo, setDeviceInfo] = useState<any>({});
+  const [permissionStatus, setPermissionStatus] = useState<string>('unknown');
+  
+  const {
+    expoNotificationsAvailable,
+    requestPermissions,
+    scheduleNotification,
+    sendImmediateNotification,
+    isSupported,
+  } = useNotifications();
+
+  useEffect(() => {
+    checkCurrentStatus();
+    getDeviceInfo();
+  }, []);
+
+  const getDeviceInfo = () => {
+    const info = {
+      platform: Platform.OS,
+      version: Platform.Version,
+      isDevice: Constants.isDevice,
+      appOwnership: Constants.appOwnership,
+      expoVersion: Constants.expoVersion,
+      deviceName: Constants.deviceName,
+      deviceYearClass: Constants.deviceYearClass,
+    };
+    setDeviceInfo(info);
+    addTestResult(`📱 Device Info: ${Platform.OS} ${Platform.Version}, Device: ${Constants.isDevice}, Ownership: ${Constants.appOwnership}`);
+  };
+
+  const checkCurrentStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('pushToken');
+      if (token) {
+        setPushToken(token);
+        setIsRegistered(true);
+        addTestResult('✅ Push token found in storage');
+      } else {
+        addTestResult('⚠️ No push token found in storage');
+      }
+    } catch (error) {
+      addTestResult('❌ Error checking token status');
+    }
+  };
 
   const addTestResult = (result: string) => {
-    setTestResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${result}`]);
+    const timestamp = new Date().toLocaleTimeString();
+    setTestResults(prev => [...prev, `${timestamp}: ${result}`]);
+  };
+
+  const testPermissionRequest = async () => {
+    setIsLoading(true);
+    addTestResult('🔔 Testing permission request...');
+    
+    try {
+      const granted = await requestPermissions();
+      if (granted) {
+        setPermissionStatus('granted');
+        addTestResult('✅ Notification permissions granted');
+      } else {
+        setPermissionStatus('denied');
+        addTestResult('❌ Notification permissions denied');
+        Alert.alert(
+          'Permission Denied',
+          'Please enable notifications in your device settings to test push notifications.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+      }
+    } catch (error: any) {
+      addTestResult(`❌ Permission request failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const testTokenGeneration = async () => {
+    setIsLoading(true);
+    addTestResult('🔔 Testing token generation...');
+    
+    try {
+      const notificationService = NotificationService.getInstance();
+      const token = await notificationService.getPushToken();
+      
+      if (token) {
+        setPushToken(token);
+        addTestResult(`✅ Push token generated: ${token.substring(0, 20)}...`);
+        addTestResult(`📏 Token length: ${token.length} characters`);
+      } else {
+        addTestResult('❌ Failed to generate push token');
+      }
+    } catch (error: any) {
+      addTestResult(`❌ Token generation failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const testTokenRegistration = async () => {
+    if (!pushToken) {
+      addTestResult('❌ No push token available for registration');
+      return;
+    }
+
+    setIsLoading(true);
+    addTestResult('🔔 Testing token registration with backend...');
+    
+    try {
+      const tokenService = TokenRegistrationService.getInstance();
+      const result = await tokenService.registerToken(pushToken);
+      
+      if (result.success) {
+        setIsRegistered(true);
+        addTestResult('✅ Token registered successfully with backend');
+      } else {
+        addTestResult(`❌ Token registration failed: ${result.error}`);
+      }
+    } catch (error: any) {
+      addTestResult(`❌ Registration error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const testLocalNotification = async () => {
+    setIsLoading(true);
+    addTestResult('🔔 Testing local notification...');
+    
     try {
-      addTestResult('🧪 Testing local immediate notification...');
       const identifier = await sendImmediateNotification(
-        '🧪 Local Test',
-        'This is a local test notification!',
-        { type: 'local_test', timestamp: Date.now() }
+        '🧪 Test Notification',
+        'This is a test notification from your CRM app!',
+        { 
+          type: 'test', 
+          timestamp: Date.now(),
+          testId: Math.random().toString(36).substr(2, 9)
+        }
       );
-      addTestResult(`✅ Local notification sent with ID: ${identifier}`);
+      
+      if (identifier) {
+        addTestResult('✅ Local notification sent successfully');
+        addTestResult(`🆔 Notification ID: ${identifier}`);
+      } else {
+        addTestResult('❌ Failed to send local notification');
+      }
     } catch (error: any) {
       addTestResult(`❌ Local notification failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const testDelayedNotification = async () => {
+  const testScheduledNotification = async () => {
+    setIsLoading(true);
+    addTestResult('🔔 Testing scheduled notification (5 seconds)...');
+    
     try {
-      addTestResult('⏰ Testing delayed notification (5 seconds)...');
       const identifier = await scheduleNotification(
-        '⏰ Delayed Test',
-        'This notification was scheduled for 5 seconds later',
-        { type: 'delayed_test', timestamp: Date.now() },
+        '⏰ Scheduled Test',
+        'This notification was scheduled 5 seconds ago',
+        { 
+          type: 'scheduled_test', 
+          timestamp: Date.now(),
+          testId: Math.random().toString(36).substr(2, 9)
+        },
         { seconds: 5 }
       );
-      addTestResult(`✅ Delayed notification scheduled with ID: ${identifier}`);
-    } catch (error: any) {
-      addTestResult(`❌ Delayed notification failed: ${error.message}`);
-    }
-  };
-
-  const testBackendConnection = async () => {
-    try {
-      addTestResult('📡 Testing backend connection...');
-      const authToken = await AsyncStorage.getItem('token');
-      if (!authToken) {
-        addTestResult('❌ No auth token available');
-        return;
-      }
-
-      const baseURL = getApiBaseUrl();
-      const response = await fetch(`${baseURL}${API_ENDPOINTS.PUSH_NOTIFICATIONS.STATUS}`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        addTestResult(`✅ Backend connection successful: ${data.message || 'OK'}`);
+      
+      if (identifier) {
+        addTestResult('✅ Notification scheduled successfully');
+        addTestResult(`🆔 Scheduled ID: ${identifier}`);
       } else {
-        addTestResult(`❌ Backend connection failed: ${response.status} ${response.statusText}`);
+        addTestResult('❌ Failed to schedule notification');
       }
     } catch (error: any) {
-      addTestResult(`❌ Backend connection error: ${error.message}`);
+      addTestResult(`❌ Scheduled notification failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const sendTestNotification = async () => {
+  const testBackendNotification = async () => {
+    if (!pushToken) {
+      addTestResult('❌ No push token available for backend test');
+      return;
+    }
+
+    setIsLoading(true);
+    addTestResult('🔔 Testing backend notification...');
+    
     try {
-      addTestResult('📱 Sending test notification via backend...');
       const authToken = await AsyncStorage.getItem('token');
       if (!authToken) {
         addTestResult('❌ No auth token available');
         return;
       }
 
-      const baseURL = getApiBaseUrl();
-      const response = await fetch(`${baseURL}${API_ENDPOINTS.PUSH_NOTIFICATIONS.TEST}`, {
+      const response = await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.PUSH_NOTIFICATIONS.TEST}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          message: '🧪 Test notification from mobile app',
-          priority: 'HIGH',
-          data: { type: 'test', timestamp: Date.now() }
+          pushToken: pushToken,
+          deviceType: Platform.OS,
+          message: 'Test notification from CRM app',
+          title: '🧪 Backend Test',
         }),
       });
 
       if (response.ok) {
-        addTestResult('✅ Test notification sent successfully via backend!');
-        addTestResult('💡 Check if you see a push notification on your phone screen');
+        const data = await response.json();
+        addTestResult('✅ Backend notification test sent successfully');
+        addTestResult(`📊 Response: ${JSON.stringify(data)}`);
       } else {
-        addTestResult(`❌ Failed to send test notification: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        addTestResult(`❌ Backend test failed: ${response.status} ${response.statusText}`);
+        addTestResult(`📄 Error: ${errorText}`);
       }
     } catch (error: any) {
-      addTestResult(`❌ Error sending test notification: ${error.message}`);
+      addTestResult(`❌ Backend test error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const testNotificationSettings = async () => {
+  const testMultipleNotifications = async () => {
+    setIsLoading(true);
+    addTestResult('🔔 Testing multiple notifications...');
+    
     try {
-      addTestResult('⚙️ Testing notification settings...');
+      const notifications = [
+        { title: '📊 Lead Update', body: 'New lead added to your pipeline' },
+        { title: '✅ Task Complete', body: 'Task "Follow up call" completed' },
+        { title: '📅 Meeting Reminder', body: 'Meeting with client in 30 minutes' },
+        { title: '💰 Deal Closed', body: 'Congratulations! Deal worth $50K closed' },
+      ];
+
+      for (let i = 0; i < notifications.length; i++) {
+        const notification = notifications[i];
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
+        
+        const identifier = await sendImmediateNotification(
+          notification.title,
+          notification.body,
+          { 
+            type: 'multiple_test', 
+            index: i,
+            timestamp: Date.now()
+          }
+        );
+        
+        addTestResult(`✅ Notification ${i + 1} sent: ${notification.title}`);
+      }
       
-      // Test if we can schedule a notification
-      const identifier = await scheduleNotification(
-        '⚙️ Settings Test',
-        'Testing notification settings and permissions',
-        { type: 'settings_test' },
-        { seconds: 2 }
-      );
-      
-      addTestResult(`✅ Notification settings test passed: ${identifier}`);
-      addTestResult('💡 If you see this notification, your settings are correct');
-      
+      addTestResult('✅ All multiple notifications sent successfully');
     } catch (error: any) {
-      addTestResult(`❌ Notification settings test failed: ${error.message}`);
+      addTestResult(`❌ Multiple notifications failed: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const clearTestResults = () => {
+  const clearResults = () => {
     setTestResults([]);
+  };
+
+  const exportResults = () => {
+    const results = {
+      timestamp: new Date().toISOString(),
+      deviceInfo,
+      pushToken: pushToken ? pushToken.substring(0, 20) + '...' : null,
+      isRegistered,
+      permissionStatus,
+      testResults,
+    };
+    
+    console.log('📊 Test Results Export:', JSON.stringify(results, null, 2));
+    Alert.alert('Results Exported', 'Check console for detailed test results');
   };
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>🧪 Push Notification Test</Text>
-      
-      <View style={styles.testSection}>
-        <Text style={styles.sectionTitle}>🔧 Test Local Notifications</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>🔔 Push Notification Test</Text>
+        <Text style={styles.subtitle}>
+          Status: {isSupported ? '✅ Supported' : '❌ Not Supported'}
+        </Text>
+        <Text style={styles.subtitle}>
+          Expo Notifications: {expoNotificationsAvailable ? '✅ Available' : '❌ Not Available'}
+        </Text>
+        <Text style={styles.subtitle}>
+          Platform: {Platform.OS} {Platform.Version}
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Current Status</Text>
+        <Text style={styles.statusText}>
+          Push Token: {pushToken ? `${pushToken.substring(0, 20)}...` : 'Not available'}
+        </Text>
+        <Text style={styles.statusText}>
+          Registered: {isRegistered ? '✅ Yes' : '❌ No'}
+        </Text>
+        <Text style={styles.statusText}>
+          Permission: {permissionStatus}
+        </Text>
+        <Text style={styles.statusText}>
+          Device: {Constants.isDevice ? 'Physical Device' : 'Simulator'}
+        </Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Basic Tests</Text>
         
-        <TouchableOpacity 
-          style={[styles.testButton, styles.primaryButton]} 
+        <TouchableOpacity
+          style={[styles.button, styles.permissionButton, isLoading && styles.buttonDisabled]}
+          onPress={testPermissionRequest}
+          disabled={isLoading}
+        >
+          <Ionicons name="shield-checkmark" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Request Permissions</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.tokenButton, isLoading && styles.buttonDisabled]}
+          onPress={testTokenGeneration}
+          disabled={isLoading}
+        >
+          <Ionicons name="key" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Generate Push Token</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.registerButton, isLoading && styles.buttonDisabled]}
+          onPress={testTokenRegistration}
+          disabled={isLoading || !pushToken}
+        >
+          <Ionicons name="cloud-upload" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Register Token</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Notification Tests</Text>
+        
+        <TouchableOpacity
+          style={[styles.button, styles.notificationButton, isLoading && styles.buttonDisabled]}
           onPress={testLocalNotification}
+          disabled={isLoading}
         >
-          <Text style={styles.buttonText}>📱 Test Local Notification</Text>
+          <Ionicons name="notifications" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Send Local Notification</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.testButton, styles.successButton]} 
-          onPress={testDelayedNotification}
+        <TouchableOpacity
+          style={[styles.button, styles.scheduleButton, isLoading && styles.buttonDisabled]}
+          onPress={testScheduledNotification}
+          disabled={isLoading}
         >
-          <Text style={styles.buttonText}>⏰ Test Delayed Notification</Text>
+          <Ionicons name="time" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Schedule Notification (5s)</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.testButton, styles.warningButton]} 
-          onPress={testNotificationSettings}
+        <TouchableOpacity
+          style={[styles.button, styles.backendButton, isLoading && styles.buttonDisabled]}
+          onPress={testBackendNotification}
+          disabled={isLoading || !pushToken}
         >
-          <Text style={styles.buttonText}>⚙️ Test Notification Settings</Text>
+          <Ionicons name="server" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Test Backend Notification</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.multipleButton, isLoading && styles.buttonDisabled]}
+          onPress={testMultipleNotifications}
+          disabled={isLoading}
+        >
+          <Ionicons name="layers" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Test Multiple Notifications</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.testSection}>
-        <Text style={styles.sectionTitle}>🌐 Test Backend Integration</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Actions</Text>
         
-        <TouchableOpacity 
-          style={[styles.testButton, styles.infoButton]} 
-          onPress={testBackendConnection}
+        <TouchableOpacity
+          style={[styles.button, styles.exportButton]}
+          onPress={exportResults}
         >
-          <Text style={styles.buttonText}>📡 Test Backend Connection</Text>
+          <Ionicons name="download" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Export Results</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={[styles.testButton, styles.dangerButton]} 
-          onPress={sendTestNotification}
+        <TouchableOpacity
+          style={[styles.button, styles.clearButton]}
+          onPress={clearResults}
         >
-          <Text style={styles.buttonText}>🚀 Send Backend Test Notification</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.resultsSection}>
-        <Text style={styles.sectionTitle}>📋 Test Results</Text>
-        {testResults.length === 0 ? (
-          <Text style={styles.noResultsText}>No test results yet. Run a test to see results.</Text>
-        ) : (
-          testResults.map((result, index) => (
-            <Text key={index} style={styles.resultText}>
-              {result}
-            </Text>
-          ))
-        )}
-      </View>
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={[styles.testButton, styles.secondaryButton]} 
-          onPress={clearTestResults}
-        >
-          <Text style={styles.buttonText}>🗑️ Clear Results</Text>
+          <Ionicons name="trash" size={20} color="#fff" style={styles.buttonIcon} />
+          <Text style={styles.buttonText}>Clear Results</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.infoContainer}>
-        <Text style={styles.infoTitle}>ℹ️ How to Test Push Notifications:</Text>
-        <Text style={styles.infoText}>
-          • <Text style={styles.bold}>Local Tests</Text> - Verify app can send notifications
-        </Text>
-        <Text style={styles.infoText}>
-          • <Text style={styles.bold}>Backend Tests</Text> - Verify backend can send push notifications
-        </Text>
-        <Text style={styles.infoText}>
-          • <Text style={styles.bold}>Check Phone Screen</Text> - Look for push notifications on your device
-        </Text>
-        <Text style={styles.infoText}>
-          • <Text style={styles.bold}>Test with App Closed</Text> - Close app and wait for backend notification
-        </Text>
-      </View>
-
-      <View style={styles.noteContainer}>
-        <Text style={styles.noteTitle}>💡 Important Notes:</Text>
-        <Text style={styles.noteText}>
-          • <Text style={styles.bold}>Push notifications</Text> appear on your phone screen
-        </Text>
-        <Text style={styles.noteText}>
-          • <Text style={styles.bold}>Local notifications</Text> appear only when app is open
-        </Text>
-        <Text style={styles.noteText}>
-          • <Text style={styles.bold}>Background notifications</Text> should show even when app is closed
-        </Text>
-        <Text style={styles.noteText}>
-          • <Text style={styles.bold}>Check phone settings</Text> if notifications don't appear
-        </Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Test Results ({testResults.length})</Text>
+        <View style={styles.resultsContainer}>
+          {testResults.length === 0 ? (
+            <Text style={styles.noResults}>No test results yet. Start testing to see results here.</Text>
+          ) : (
+            testResults.map((result, index) => (
+              <Text key={index} style={styles.resultText}>
+                {result}
+              </Text>
+            ))
+          )}
+        </View>
       </View>
     </ScrollView>
   );
@@ -233,21 +449,36 @@ export const PushNotificationTest: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+  },
+  header: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#1e293b',
+    color: '#333',
+    marginBottom: 8,
   },
-  testSection: {
-    backgroundColor: '#ffffff',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
+  subtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  section: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -256,112 +487,76 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-    color: '#1e293b',
-  },
-  testButton: {
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
+    fontWeight: 'bold',
+    color: '#333',
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  primaryButton: {
-    backgroundColor: '#3b82f6',
+  statusText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
   },
-  successButton: {
+  button: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  buttonDisabled: {
+    backgroundColor: '#ccc',
+  },
+  permissionButton: {
+    backgroundColor: '#007AFF',
+  },
+  tokenButton: {
+    backgroundColor: '#5856D6',
+  },
+  registerButton: {
+    backgroundColor: '#34C759',
+  },
+  notificationButton: {
     backgroundColor: '#10b981',
   },
-  warningButton: {
+  scheduleButton: {
     backgroundColor: '#f59e0b',
   },
-  infoButton: {
+  backendButton: {
+    backgroundColor: '#8b5cf6',
+  },
+  multipleButton: {
     backgroundColor: '#06b6d4',
   },
-  dangerButton: {
-    backgroundColor: '#ef4444',
+  exportButton: {
+    backgroundColor: '#6366f1',
   },
-  secondaryButton: {
-    backgroundColor: '#6b7280',
+  clearButton: {
+    backgroundColor: '#FF3B30',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   buttonText: {
-    color: '#ffffff',
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  resultsSection: {
-    backgroundColor: '#ffffff',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  resultsContainer: {
+    maxHeight: 300,
   },
-  noResultsText: {
-    textAlign: 'center',
-    color: '#94a3b8',
+  noResults: {
+    fontSize: 14,
+    color: '#999',
     fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 20,
   },
   resultText: {
-    fontSize: 14,
-    marginBottom: 8,
-    color: '#475569',
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 4,
     fontFamily: 'monospace',
-    lineHeight: 20,
-  },
-  buttonContainer: {
-    marginBottom: 20,
-  },
-  infoContainer: {
-    backgroundColor: '#dbeafe',
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#3b82f6',
-    marginBottom: 20,
-  },
-  infoTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#1e40af',
-  },
-  infoText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 4,
-    color: '#1e40af',
-  },
-  bold: {
-    fontWeight: '600',
-  },
-  noteContainer: {
-    backgroundColor: '#fef3c7',
-    padding: 16,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
-  },
-  noteTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#92400e',
-  },
-  noteText: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 4,
-    color: '#92400e',
   },
 });
 

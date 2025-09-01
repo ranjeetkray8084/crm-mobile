@@ -1,19 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
+  Alert,
   StyleSheet,
   ScrollView,
-  Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '../../shared/contexts/NotificationContext';
 import NotificationService from '../../core/services/NotificationService';
 import TokenRegistrationService from '../../core/services/TokenRegistrationService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const SimpleNotificationTest: React.FC = () => {
+export const NotificationTest: React.FC = () => {
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -26,6 +25,25 @@ export const SimpleNotificationTest: React.FC = () => {
     sendImmediateNotification,
     isSupported,
   } = useNotifications();
+
+  useEffect(() => {
+    checkCurrentStatus();
+  }, []);
+
+  const checkCurrentStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('pushToken');
+      if (token) {
+        setPushToken(token);
+        setIsRegistered(true);
+        addTestResult('✅ Push token found in storage');
+      } else {
+        addTestResult('⚠️ No push token found in storage');
+      }
+    } catch (error) {
+      addTestResult('❌ Error checking token status');
+    }
+  };
 
   const addTestResult = (result: string) => {
     setTestResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${result}`]);
@@ -150,7 +168,7 @@ export const SimpleNotificationTest: React.FC = () => {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>🔔 Push Notification Test</Text>
+        <Text style={styles.title}>Push Notification Test</Text>
         <Text style={styles.subtitle}>
           Status: {isSupported ? '✅ Supported' : '❌ Not Supported'}
         </Text>
@@ -177,7 +195,6 @@ export const SimpleNotificationTest: React.FC = () => {
           onPress={testPermissionRequest}
           disabled={isLoading}
         >
-          <Ionicons name="shield-checkmark" size={20} color="#fff" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Request Permissions</Text>
         </TouchableOpacity>
 
@@ -186,7 +203,6 @@ export const SimpleNotificationTest: React.FC = () => {
           onPress={testTokenGeneration}
           disabled={isLoading}
         >
-          <Ionicons name="key" size={20} color="#fff" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Generate Push Token</Text>
         </TouchableOpacity>
 
@@ -195,25 +211,22 @@ export const SimpleNotificationTest: React.FC = () => {
           onPress={testTokenRegistration}
           disabled={isLoading || !pushToken}
         >
-          <Ionicons name="cloud-upload" size={20} color="#fff" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Register Token</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.button, styles.notificationButton, isLoading && styles.buttonDisabled]}
+          style={[styles.button, isLoading && styles.buttonDisabled]}
           onPress={testLocalNotification}
           disabled={isLoading}
         >
-          <Ionicons name="notifications" size={20} color="#fff" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Send Local Notification</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.button, styles.scheduleButton, isLoading && styles.buttonDisabled]}
+          style={[styles.button, isLoading && styles.buttonDisabled]}
           onPress={testScheduledNotification}
           disabled={isLoading}
         >
-          <Ionicons name="time" size={20} color="#fff" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Schedule Notification</Text>
         </TouchableOpacity>
 
@@ -221,7 +234,6 @@ export const SimpleNotificationTest: React.FC = () => {
           style={[styles.button, styles.clearButton]}
           onPress={clearResults}
         >
-          <Ionicons name="trash" size={20} color="#fff" style={styles.buttonIcon} />
           <Text style={styles.buttonText}>Clear Results</Text>
         </TouchableOpacity>
       </View>
@@ -230,7 +242,7 @@ export const SimpleNotificationTest: React.FC = () => {
         <Text style={styles.sectionTitle}>Test Results</Text>
         <View style={styles.resultsContainer}>
           {testResults.length === 0 ? (
-            <Text style={styles.noResults}>No test results yet. Start testing to see results here.</Text>
+            <Text style={styles.noResults}>No test results yet</Text>
           ) : (
             testResults.map((result, index) => (
               <Text key={index} style={styles.resultText}>
@@ -299,24 +311,13 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 8,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
   },
   buttonDisabled: {
     backgroundColor: '#ccc',
   },
-  notificationButton: {
-    backgroundColor: '#10b981',
-  },
-  scheduleButton: {
-    backgroundColor: '#f59e0b',
-  },
   clearButton: {
     backgroundColor: '#FF3B30',
-  },
-  buttonIcon: {
-    marginRight: 8,
   },
   buttonText: {
     color: '#fff',
@@ -330,8 +331,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     fontStyle: 'italic',
-    textAlign: 'center',
-    paddingVertical: 20,
   },
   resultText: {
     fontSize: 12,
@@ -341,4 +340,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SimpleNotificationTest;
+export default NotificationTest;

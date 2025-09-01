@@ -23,6 +23,8 @@ export default function RootLayout() {
           <Stack.Screen name="add-note" />
           <Stack.Screen name="add-task" />
           <Stack.Screen name="add-user" />
+          <Stack.Screen name="notification-test" />
+          <Stack.Screen name="push-test" />
           <Stack.Screen name="+not-found" />
         </Stack>
       </AuthProvider>

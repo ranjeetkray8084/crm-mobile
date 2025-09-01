@@ -30,7 +30,7 @@ class NotificationService {
 
   constructor() {
     this.isExpoGo = Constants.appOwnership === 'expo';
-    this.isDevelopmentBuild = Constants.appOwnership === 'standalone' || Constants.appOwnership === null;
+    this.isDevelopmentBuild = Constants.appOwnership === 'standalone';
     this.notificationsAvailable = !!(Notifications && !this.isExpoGo);
     this.tokenRegistrationService = TokenRegistrationService.getInstance();
     
@@ -112,9 +112,10 @@ class NotificationService {
       // Set up Firebase messaging listeners (fallback)
       try {
         const messaging = await import('@react-native-firebase/messaging');
+        const messagingInstance = messaging.default();
         
         // Listen for foreground messages
-        const unsubscribeForeground = messaging.default().onMessage(async (remoteMessage: any) => {
+        const unsubscribeForeground = messagingInstance.onMessage(async (remoteMessage: any) => {
           console.log('🔔 DEBUG: Firebase foreground message received:', remoteMessage);
           
           // Show local notification for foreground messages
@@ -130,18 +131,18 @@ class NotificationService {
         });
 
         // Listen for background messages
-        messaging.default().setBackgroundMessageHandler(async (remoteMessage: any) => {
+        messagingInstance.setBackgroundMessageHandler(async (remoteMessage: any) => {
           console.log('🔔 DEBUG: Firebase background message received:', remoteMessage);
         });
 
         // Listen for notification taps when app is in background
-        messaging.default().onNotificationOpenedApp((remoteMessage: any) => {
+        messagingInstance.onNotificationOpenedApp((remoteMessage: any) => {
           console.log('🔔 DEBUG: Firebase notification opened app:', remoteMessage);
           this.handleNotificationTap({ notification: { request: { content: { data: remoteMessage.data } } } });
         });
 
         // Check if app was opened from a notification
-        messaging.default().getInitialNotification().then((remoteMessage: any) => {
+        messagingInstance.getInitialNotification().then((remoteMessage: any) => {
           if (remoteMessage) {
             console.log('🔔 DEBUG: App opened from notification:', remoteMessage);
             this.handleNotificationTap({ notification: { request: { content: { data: remoteMessage.data } } } });
@@ -283,7 +284,7 @@ class NotificationService {
         
         try {
           const expoPushToken = await Notifications.getExpoPushTokenAsync({
-            projectId: 'e54487e4-0b6f-4429-8b02-f1c84f6b0bba',
+            projectId: '7b166f07-1eab-40be-8faf-4252befa0675', // Updated to match app.config.js
             experienceId: '@ranjeet1620/crmnativeexpo'
           });
           
@@ -531,7 +532,7 @@ class NotificationService {
       // Generate new token
       console.log('🔔 DEBUG: Generating new push token...');
       const token = await Notifications.getExpoPushTokenAsync({
-        projectId: 'e54487e4-0b6f-4429-8b02-f1c84f6b0bba', // From your app.config.js
+        projectId: '7b166f07-1eab-40be-8faf-4252befa0675', // From your app.config.js
       });
 
       if (token.data) {

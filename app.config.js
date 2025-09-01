@@ -39,7 +39,14 @@ export default {
         },
         UIBackgroundModes: ["remote-notification", "background-fetch"],
         NSUserNotificationAlertStyle: "alert",
-        NSUserNotificationUsageDescription: "This app uses notifications to keep you updated about leads, tasks, and important announcements."
+        NSUserNotificationUsageDescription: "This app uses notifications to keep you updated about leads, tasks, and important announcements.",
+        CFBundleURLTypes: [
+          {
+            CFBundleURLName: "leadstracker",
+            CFBundleURLSchemes: ["leadstracker"]
+          }
+        ],
+        ITSAppUsesNonExemptEncryption: false
       }
     },
     android: {
@@ -64,7 +71,7 @@ export default {
       useNextNotificationsApi: true,
       allowBackup: true,
       allowClearUserData: true,
-      // googleServicesFile: "./android/app/google-services.json",
+      googleServicesFile: "./android/app/google-services.json",
       compileSdkVersion: 34,
       targetSdkVersion: 34,
       minSdkVersion: 24,
@@ -78,7 +85,7 @@ export default {
       environment: process.env.NODE_ENV || 'development',
       debug: process.env.NODE_ENV === 'development',
       eas: {
-        projectId: "e54487e4-0b6f-4429-8b02-f1c84f6b0bba"
+        projectId: "7b166f07-1eab-40be-8faf-4252befa0675"
       }
     },
     plugins: [
@@ -107,20 +114,20 @@ export default {
         }
       ],
       "expo-dev-client",
-      // [
-      //   "@react-native-firebase/app",
-      //   {
-      //     "android_package_name": "com.ranjeet1620.crmnativeexpo",
-      //     "google_services_file": "./android/app/google-services.json"
-      //   }
-      // ],
-      // [
-      //   "@react-native-firebase/messaging",
-      //   {
-      //     "android_package_name": "com.ranjeet1620.crmnativeexpo",
-      //     "google_services_file": "./android/app/google-services.json"
-      //   }
-      // ],
+      [
+        "@react-native-firebase/app",
+        {
+          "android_package_name": "com.ranjeet1620.crmnativeexpo",
+          "google_services_file": "./android/app/google-services.json"
+        }
+      ],
+      [
+        "@react-native-firebase/messaging",
+        {
+          "android_package_name": "com.ranjeet1620.crmnativeexpo",
+          "google_services_file": "./android/app/google-services.json"
+        }
+      ],
       "expo-router"
     ],
     // Production notification configuration

@@ -1,44 +1,75 @@
 # Push Notifications Setup Guide
 
-This guide explains how to set up and use push notifications in your CRM React Native Expo app.
+## Overview
+This guide will help you set up push notifications for your CRM React Native Expo app. The app uses Expo Notifications as the primary method and Firebase as a fallback.
 
-## 🚀 Features
+## Prerequisites
+- Expo CLI installed
+- Firebase project created
+- Physical device for testing (push notifications don't work in simulators)
 
-- **Local Notifications**: Schedule notifications for specific times
-- **Push Notifications**: Server-sent notifications via Expo
-- **Quick Reminders**: 5 min, 15 min, 1 hour, 1 day options
-- **Event Reminders**: Automatic reminders for events
-- **Test Notifications**: Immediate notifications for testing
-- **Notification Management**: View and cancel scheduled notifications
-- **Permission Management**: User-friendly permission requests
+## Step 1: Firebase Setup
 
-## 📱 Installation
+### 1.1 Create Firebase Project
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project named "leadstracker-crm"
+3. Enable Cloud Messaging
 
-The required packages have already been installed:
+### 1.2 Get Firebase Configuration
+1. In Firebase Console, go to Project Settings
+2. Add Android app with package name: `com.ranjeet1620.crmnativeexpo`
+3. Download the `google-services.json` file
+4. Replace the placeholder file in `android/app/google-services.json`
 
-```bash
-npm install expo-notifications expo-device
-```
+### 1.3 Update Firebase Configuration
+Replace the placeholder values in `google-services.json` with your actual Firebase project details:
 
-## ⚙️ Configuration
-
-### 1. Project ID Configuration ✅
-
-Your project ID is already configured in `app.config.js`:
-```javascript
-eas: {
-  projectId: "e54487e4-0b6f-4429-8b02-f1c84f6b0bba"
+```json
+{
+  "project_info": {
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "leadstracker-crm",
+    "storage_bucket": "leadstracker-crm.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "YOUR_MOBILE_SDK_APP_ID",
+        "android_client_info": {
+          "package_name": "com.ranjeet1620.crmnativeexpo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "YOUR_CLIENT_ID",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "YOUR_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "YOUR_CLIENT_ID",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
 }
 ```
 
-**Important**: This project ID is used in:
-- `app.config.js` (EAS configuration)
-- `NotificationService.ts` (fallback)
-- `NotificationTest.tsx` (testing)
+## Step 2: Expo Configuration
 
-### 2. App Configuration ✅
-
-Your `app.config.js` includes comprehensive notification configuration:
+### 2.1 Verify app.config.js
+The app.config.js already has the correct configuration for push notifications:
 
 ```javascript
 plugins: [
@@ -49,6 +80,7 @@ plugins: [
       "color": "#ffffff",
       "mode": "production",
       "androidMode": "default",
+      "androidCollapsedTitle": "New Notification",
       "androidChannelId": "default",
       "androidChannelName": "Default",
       "androidChannelDescription": "Default notification channel for leads, tasks, and announcements",
@@ -64,227 +96,160 @@ plugins: [
       "iosBadge": true,
       "iosCritical": false
     }
+  ],
+  [
+    "@react-native-firebase/app",
+    {
+      "android_package_name": "com.ranjeet1620.crmnativeexpo",
+      "google_services_file": "./android/app/google-services.json"
+    }
+  ],
+  [
+    "@react-native-firebase/messaging",
+    {
+      "android_package_name": "com.ranjeet1620.crmnativeexpo",
+      "google_services_file": "./android/app/google-services.json"
+    }
   ]
 ]
 ```
 
-### 3. Permissions Configuration ✅
+### 2.2 Project ID
+The project ID in the configuration is: `7b166f07-1eab-40be-8faf-4252befa0675`
 
-**Android Permissions** (already configured):
-```javascript
-permissions: [
-  "android.permission.INTERNET",
-  "android.permission.ACCESS_NETWORK_STATE",
-  "android.permission.VIBRATE",
-  "android.permission.WAKE_LOCK",
-  "android.permission.RECEIVE_BOOT_COMPLETED",
-  "android.permission.POST_NOTIFICATIONS",
-  "android.permission.FOREGROUND_SERVICE",
-  "android.permission.SYSTEM_ALERT_WINDOW",
-  "android.permission.RECEIVE_NOTIFICATIONS",
-  "android.permission.SCHEDULE_EXACT_ALARM"
-]
-```
+## Step 3: Backend Integration
 
-**iOS Permissions** (already configured):
-```javascript
-UIBackgroundModes: ["remote-notification", "background-fetch"],
-NSUserNotificationAlertStyle: "alert",
-NSUserNotificationUsageDescription: "This app uses notifications to keep you updated about leads, tasks, and important announcements."
-```
+### 3.1 API Endpoints
+The app expects these endpoints for push notifications:
 
-## 🔧 Usage
+- `POST /api/push-notifications/register` - Register push token
+- `POST /api/push-notifications/logout` - Deactivate token on logout
+- `GET /api/push-notifications/status` - Check token status
+- `POST /api/push-notifications/test` - Test notification
 
-### Basic Usage
+### 3.2 Token Registration
+The app automatically registers the push token with the backend when:
+- User logs in
+- App starts up
+- Token is refreshed
 
-The notification system is automatically initialized when the app starts. You can use it in any component:
+## Step 4: Testing
 
-```typescript
-import { useNotifications } from '../shared/contexts/NotificationContext';
-
-const MyComponent = () => {
-  const { 
-    sendImmediateNotification, 
-    scheduleNotificationWithDelay,
-    checkPermissionStatus,
-    requestPermissions 
-  } = useNotifications();
-
-  const handleNotification = async () => {
-    // Check permissions first
-    const status = await checkPermissionStatus();
-    if (status !== 'granted') {
-      const granted = await requestPermissions();
-      if (!granted) return;
-    }
-
-    await sendImmediateNotification({
-      title: 'Hello!',
-      body: 'This is a test notification',
-      data: { type: 'test' },
-      sound: true,
-      priority: 'high',
-    });
-  };
-
-  // ... rest of component
-};
-```
-
-### Permission Management
-
-Use the `NotificationPermissionRequest` component for user-friendly permission requests:
-
-```typescript
-import NotificationPermissionRequest from '../components/notes/NotificationPermissionRequest';
-
-const MyScreen = () => {
-  return (
-    <View>
-      <NotificationPermissionRequest
-        onPermissionGranted={() => console.log('Permissions granted!')}
-        onPermissionDenied={() => console.log('Permissions denied')}
-      />
-    </View>
-  );
-};
-```
-
-### Available Methods
-
-- `sendImmediateNotification()` - Send notification immediately
-- `scheduleNotificationWithDelay()` - Schedule notification with delay in seconds
-- `scheduleNotificationForDateTime()` - Schedule notification for specific date/time
-- `cancelNotification()` - Cancel specific notification
-- `cancelAllNotifications()` - Cancel all scheduled notifications
-- `checkPermissionStatus()` - Check current permission status
-- `requestPermissions()` - Request notification permissions
-
-### Notification Data Structure
-
-```typescript
-interface NotificationData {
-  title: string;           // Notification title
-  body: string;            // Notification body text
-  data?: any;              // Custom data payload
-  sound?: boolean;         // Play sound (default: true)
-  priority?: 'default' | 'normal' | 'high'; // Priority level
-}
-```
-
-## 🎯 Integration with Notes
-
-The notification system is integrated with the NoteDetails component:
-
-1. **Notification Button**: Click the bell icon (🔔) in the note details header
-2. **Quick Options**: Choose from preset reminder times
-3. **Event Reminders**: For events, automatically schedule reminders before the event
-4. **Manage Notifications**: View and cancel scheduled notifications
-
-## 🧪 Testing
-
-### Test Component
-
-Use the `NotificationTest` component to test notifications:
-
-```typescript
-import NotificationTest from '../components/notes/NotificationTest';
-
-// In your component
-<NotificationTest />
-```
-
-### Manual Testing
-
-1. **Immediate Notification**: Test instant notifications
-2. **Delayed Notification**: Test scheduled notifications
-3. **Device Settings**: Ensure notifications are enabled in device settings
-
-### Test Push Notification
-
-Use the backend endpoint to test push notifications:
-
+### 4.1 Build Development Version
 ```bash
-POST /api/push-notifications/test
-{
-  "pushToken": "your-expo-token",
-  "deviceType": "android"
-}
+cd CRMNativeExpo
+npx expo run:android --device
 ```
 
-## 📋 Permissions
+### 4.2 Use Test Component
+The app includes a `NotificationTest` component that you can use to test:
 
-The app will automatically request notification permissions when first launched. Users can:
+1. Permission requests
+2. Token generation
+3. Token registration
+4. Local notifications
+5. Scheduled notifications
 
-- **Allow**: Full notification functionality
-- **Deny**: Limited functionality (local notifications only)
-- **Settings**: Users can change permissions in device settings
+### 4.3 Manual Testing Steps
+1. Open the app on a physical device
+2. Grant notification permissions when prompted
+3. Check that push token is generated and registered
+4. Test local notifications
+5. Test scheduled notifications
+6. Verify backend receives the token
 
-## 🔄 Notification Lifecycle
+## Step 5: Troubleshooting
 
-1. **Permission Request**: App requests notification permissions
-2. **Token Generation**: Expo generates push token for the device
-3. **Token Registration**: Token is sent to backend
-4. **Notification Scheduling**: Users can schedule notifications
-5. **Delivery**: Notifications are delivered at scheduled times
-6. **Interaction**: Users can tap notifications to open the app
+### 5.1 Common Issues
 
-## 🚨 Troubleshooting
+**Issue: Notifications not working in Expo Go**
+- Solution: Build a development build using `expo run:android`
 
-### Common Issues
+**Issue: Firebase not initialized**
+- Solution: Ensure `google-services.json` is properly configured
+- Check that Firebase project is set up correctly
 
-1. **Notifications not showing**: Check device notification settings
-2. **Permission denied**: Guide user to device settings
-3. **Token not generated**: Ensure physical device (not simulator)
-4. **Scheduled notifications not working**: Check app background permissions
+**Issue: Token not registering with backend**
+- Solution: Check network connectivity
+- Verify backend endpoints are working
+- Check authentication token is valid
 
-### Debug Information
+**Issue: Notifications not showing**
+- Solution: Check device notification settings
+- Verify app has notification permissions
+- Check notification channel configuration
 
-Check the console for:
-- Permission status
-- Push token generation
-- Notification scheduling success/failure
-- Error messages
+### 5.2 Debug Information
+The app includes extensive debug logging. Check the console for:
+- `🔔 DEBUG:` - Notification service logs
+- `✅ DEBUG:` - Success messages
+- `❌ DEBUG:` - Error messages
+- `⚠️ DEBUG:` - Warning messages
 
-## 📱 Platform Differences
+### 5.3 Testing Commands
+```bash
+# Clear cache and restart
+npx expo start --clear
 
-### iOS
-- Requires explicit permission
-- Background app refresh for scheduled notifications
-- Rich notification support
+# Build for Android
+npx expo run:android
 
-### Android
-- Automatic permission handling
-- Notification channels
-- Background service for reliable delivery
+# Build for iOS
+npx expo run:ios
 
-## 🔮 Future Enhancements
+# Check build status
+npx expo doctor
+```
 
-- **Rich Notifications**: Images, actions, and custom layouts
-- **Notification Groups**: Organize related notifications
-- **Custom Sounds**: App-specific notification sounds
-- **Deep Linking**: Navigate to specific screens from notifications
-- **Analytics**: Track notification delivery and engagement
+## Step 6: Production Deployment
 
-## 📚 Resources
+### 6.1 Build Production Version
+```bash
+# Android
+eas build --platform android --profile production
+
+# iOS
+eas build --platform ios --profile production
+```
+
+### 6.2 Update Firebase Configuration
+For production, ensure:
+- Firebase project is in production mode
+- API keys are properly configured
+- Cloud Messaging is enabled
+
+### 6.3 Backend Configuration
+Ensure your backend:
+- Has proper SSL certificates
+- Can handle the notification load
+- Has proper error handling
+- Logs notification delivery status
+
+## Step 7: Monitoring
+
+### 7.1 Firebase Analytics
+Monitor notification delivery through Firebase Console:
+- Delivery rates
+- Open rates
+- Error rates
+
+### 7.2 Backend Monitoring
+Monitor your backend for:
+- Token registration success/failure
+- Notification sending success/failure
+- API response times
+
+## Additional Resources
 
 - [Expo Notifications Documentation](https://docs.expo.dev/versions/latest/sdk/notifications/)
-- [React Native Push Notifications](https://github.com/zo0r/react-native-push-notification)
-- [iOS Notification Guidelines](https://developer.apple.com/design/human-interface-guidelines/ios/user-interface/notifications/)
-- [Android Notification Guidelines](https://developer.android.com/guide/topics/ui/notifiers/notifications)
+- [Firebase Cloud Messaging Documentation](https://firebase.google.com/docs/cloud-messaging)
+- [React Native Firebase Documentation](https://rnfirebase.io/messaging/usage)
 
-## 🤝 Support
+## Support
 
 If you encounter issues:
-
-1. Check the console for error messages
-2. Verify device notification settings
-3. Test on physical device (not simulator)
-4. Ensure all dependencies are properly installed
-5. Check Expo project configuration
-
----
-
-**Note**: Push notifications require a physical device for testing. Simulators cannot receive or display notifications.
-
-**Current Configuration Status**: ✅ All configurations are properly set up and ready to use!
+1. Check the debug logs in the console
+2. Verify all configuration files are correct
+3. Test on a physical device
+4. Check network connectivity
+5. Verify backend endpoints are working

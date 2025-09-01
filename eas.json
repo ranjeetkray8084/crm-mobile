@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 5.9.1"
+    "version": ">= 5.9.1",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -9,6 +10,10 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleDebug"
+      },
+      "ios": {
+        "buildConfiguration": "Debug",
+        "simulator": true
       },
       "node": "18.19.0",
       "env": {
@@ -20,6 +25,9 @@
       "android": {
         "buildType": "apk"
       },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
       "node": "18.19.0"
     },
     "production": {
@@ -28,15 +36,29 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       },
+      "ios": {
+        "buildConfiguration": "Release",
+        "credentialsSource": "remote"
+      },
       "node": "18.19.0",
       "env": {
         "EAS_SKIP_AUTO_FINGERPRINT": "1"
       }
     },
     "ios-preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release",
+        "credentialsSource": "remote"
+      }
     },
-    "ios-production": {}
+    "ios-production": {
+      "distribution": "internal",
+      "ios": {
+        "buildConfiguration": "Release",
+        "credentialsSource": "remote"
+      }
+    }
   },
   "submit": {
     "production": {}

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../shared/contexts/AuthContext';
 import { useResponsive } from '../core/hooks/useResponsive';
 import Sidebar from './common/Sidebar';
@@ -13,6 +14,7 @@ import UserSection from './users/UserSection';
 import AdminSection from './admins/AdminSection';
 import Logo from "./common/Logo";
 import NotificationTest from './NotificationTest';
+import SimpleNotificationTest from './common/SimpleNotificationTest';
 
 
 
@@ -28,6 +30,7 @@ export default function Dashboard({
   onLogoutPress,
 }: DashboardProps) {
   const responsive = useResponsive();
+  const router = useRouter();
   const { user } = useAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [showSidebar, setShowSidebar] = useState(false);
@@ -118,7 +121,7 @@ export default function Dashboard({
         console.log('🔔 DEBUG: Dashboard: Rendering notificationTest section');
         return (
           <View style={styles.dashboardSections}>
-            <NotificationTest />
+            <SimpleNotificationTest />
           </View>
         );
 
@@ -179,9 +182,29 @@ export default function Dashboard({
             {/* Dashboard Stats Cards */}
             <DashboardStats />
             
-
-
-
+            {/* Notification Test Buttons */}
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>🔔 Push Notifications Test</Text>
+                <Text style={styles.sectionDescription}>
+                  Test push notifications functionality including permissions, token generation, and local notifications.
+                </Text>
+                <TouchableOpacity
+                  style={styles.testButton}
+                  onPress={() => handleSectionChange('notificationTest')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.testButtonText}>Simple Test</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.testButton, styles.pushTestButton]}
+                  onPress={() => router.push('/push-test')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.testButtonText}>Advanced Test</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </>
         );
     }

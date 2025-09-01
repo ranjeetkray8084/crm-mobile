@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -32,6 +33,33 @@ export default function LoginScreen() {
 
   const router = useRouter();
   const { login, sendOtp, verifyOtp, resetPasswordWithOtp } = useAuth();
+
+  // Responsive utilities
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const isSmallScreen = screenWidth <= 375;
+  const isMediumScreen = screenWidth <= 414;
+  const isLargeScreen = screenWidth <= 768;
+  const isTablet = screenWidth >= 768;
+  const isLandscape = screenWidth > screenHeight;
+  const isVerySmallScreen = screenWidth <= 320;
+  
+  // Responsive font sizes
+  const getResponsiveFontSize = (baseSize: number) => {
+    if (isVerySmallScreen) return baseSize * 0.8;
+    if (isSmallScreen) return baseSize * 0.9;
+    if (isMediumScreen) return baseSize;
+    if (isLargeScreen) return baseSize * 1.1;
+    return baseSize * 1.2;
+  };
+
+  // Responsive spacing
+  const getResponsiveSpacing = (baseSpacing: number) => {
+    if (isVerySmallScreen) return baseSpacing * 0.7;
+    if (isSmallScreen) return baseSpacing * 0.8;
+    if (isMediumScreen) return baseSpacing;
+    if (isLargeScreen) return baseSpacing * 1.2;
+    return baseSpacing * 1.5;
+  };
 
   const handleChange = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -411,8 +439,12 @@ export default function LoginScreen() {
             <View style={styles.logoContainer}>
               <Logo size="large" />
             </View>
-            <Text style={styles.appName}>LEADS TRACKER</Text>
-            <Text style={styles.appTagline}>Track Leads, Close Faster</Text>
+            <Text style={styles.appName} numberOfLines={1} adjustsFontSizeToFit={true}>
+              LEADS TRACKER
+            </Text>
+            <Text style={styles.appTagline} numberOfLines={2}>
+              Track Leads, Close Faster
+            </Text>
           </View>
 
           {/* Form */}
@@ -437,21 +469,24 @@ const styles = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingHorizontal: Dimensions.get('window').width <= 320 ? 12 : Dimensions.get('window').width <= 375 ? 16 : Dimensions.get('window').width <= 414 ? 20 : 24,
+    paddingVertical: Dimensions.get('window').height <= 667 ? 16 : 20,
+    minHeight: Dimensions.get('window').height,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: Dimensions.get('window').height <= 667 ? 30 : 40,
+    paddingHorizontal: 10,
+    flexShrink: 1,
   },
   logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: Dimensions.get('window').width <= 320 ? 70 : Dimensions.get('window').width <= 375 ? 80 : Dimensions.get('window').width <= 414 ? 90 : 100,
+    height: Dimensions.get('window').width <= 320 ? 70 : Dimensions.get('window').width <= 375 ? 80 : Dimensions.get('window').width <= 414 ? 90 : 100,
+    borderRadius: Dimensions.get('window').width <= 320 ? 35 : Dimensions.get('window').width <= 375 ? 40 : Dimensions.get('window').width <= 414 ? 45 : 50,
     backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: Dimensions.get('window').height <= 667 ? 16 : 20,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -462,21 +497,29 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   appName: {
-    fontSize: 28,
+    fontSize: Dimensions.get('window').width <= 320 ? 20 : Dimensions.get('window').width <= 375 ? 24 : Dimensions.get('window').width <= 414 ? 26 : 28,
     fontWeight: 'bold',
     color: '#1c69ff',
     marginBottom: 8,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
+    textAlign: 'center',
+    paddingHorizontal: 10,
+    lineHeight: Dimensions.get('window').width <= 320 ? 24 : Dimensions.get('window').width <= 375 ? 28 : Dimensions.get('window').width <= 414 ? 30 : 32,
   },
   appTagline: {
-    fontSize: 14,
+    fontSize: Dimensions.get('window').width <= 320 ? 11 : Dimensions.get('window').width <= 375 ? 13 : 15,
     color: '#64748b',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    lineHeight: Dimensions.get('window').width <= 320 ? 16 : Dimensions.get('window').width <= 375 ? 18 : 20,
+    paddingHorizontal: 5,
+    minHeight: Dimensions.get('window').width <= 320 ? 32 : Dimensions.get('window').width <= 375 ? 36 : 40,
+    flexWrap: 'wrap',
   },
   formContainer: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    padding: 24,
+    padding: Dimensions.get('window').width <= 320 ? 16 : Dimensions.get('window').width <= 375 ? 20 : Dimensions.get('window').width <= 414 ? 22 : 24,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -485,55 +528,61 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 8,
+    maxWidth: Dimensions.get('window').width >= 768 ? 400 : '100%',
+    alignSelf: 'center',
+    width: '100%',
   },
   title: {
-    fontSize: 24,
+    fontSize: Dimensions.get('window').width <= 320 ? 18 : Dimensions.get('window').width <= 375 ? 20 : Dimensions.get('window').width <= 414 ? 22 : 24,
     fontWeight: 'bold',
     color: '#1e293b',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: Dimensions.get('window').width <= 320 ? 10 : Dimensions.get('window').width <= 375 ? 12 : 14,
     color: '#64748b',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: Dimensions.get('window').height <= 667 ? 20 : 24,
+    lineHeight: Dimensions.get('window').width <= 320 ? 14 : Dimensions.get('window').width <= 375 ? 16 : 18,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8fafc',
     borderRadius: 12,
-    marginBottom: 16,
+    marginBottom: Dimensions.get('window').height <= 667 ? 12 : 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+    minHeight: Dimensions.get('window').width <= 320 ? 40 : Dimensions.get('window').width <= 375 ? 45 : 50,
   },
   inputIcon: {
-    marginLeft: 16,
-    marginRight: 12,
+    marginLeft: Dimensions.get('window').width <= 320 ? 10 : Dimensions.get('window').width <= 375 ? 12 : 16,
+    marginRight: Dimensions.get('window').width <= 320 ? 6 : Dimensions.get('window').width <= 375 ? 8 : 12,
   },
   input: {
     flex: 1,
-    height: 50,
-    fontSize: 16,
+    height: Dimensions.get('window').width <= 320 ? 40 : Dimensions.get('window').width <= 375 ? 45 : 50,
+    fontSize: Dimensions.get('window').width <= 320 ? 12 : Dimensions.get('window').width <= 375 ? 14 : 16,
     color: '#1e293b',
+    paddingVertical: 0,
   },
   eyeIcon: {
-    padding: 16,
+    padding: Dimensions.get('window').width <= 320 ? 10 : Dimensions.get('window').width <= 375 ? 12 : 16,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: 24,
+    marginBottom: Dimensions.get('window').height <= 667 ? 20 : 24,
   },
   forgotPasswordText: {
     color: '#1c69ff',
-    fontSize: 14,
+    fontSize: Dimensions.get('window').width <= 320 ? 10 : Dimensions.get('window').width <= 375 ? 12 : 14,
     fontWeight: '500',
   },
   loginButton: {
     backgroundColor: '#1c69ff',
     borderRadius: 12,
-    height: 50,
+    height: Dimensions.get('window').width <= 320 ? 40 : Dimensions.get('window').width <= 375 ? 45 : 50,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#1c69ff',
@@ -551,21 +600,21 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: Dimensions.get('window').width <= 320 ? 12 : Dimensions.get('window').width <= 375 ? 14 : 16,
     fontWeight: '600',
   },
   backToLogin: {
     alignSelf: 'center',
-    marginTop: 20,
+    marginTop: Dimensions.get('window').height <= 667 ? 16 : 20,
   },
   backToLoginText: {
     color: '#64748b',
-    fontSize: 14,
+    fontSize: Dimensions.get('window').width <= 320 ? 10 : Dimensions.get('window').width <= 375 ? 12 : 14,
     fontWeight: '500',
   },
   messageContainer: {
-    marginTop: 16,
-    padding: 12,
+    marginTop: Dimensions.get('window').height <= 667 ? 12 : 16,
+    padding: Dimensions.get('window').width <= 320 ? 8 : Dimensions.get('window').width <= 375 ? 10 : 12,
     borderRadius: 10,
     alignSelf: 'center',
     width: '100%',
@@ -583,8 +632,9 @@ const styles = StyleSheet.create({
   },
   messageText: {
     color: '#065f46',
-    fontSize: 14,
+    fontSize: Dimensions.get('window').width <= 320 ? 10 : Dimensions.get('window').width <= 375 ? 12 : 14,
     fontWeight: '500',
     textAlign: 'center',
+    lineHeight: Dimensions.get('window').width <= 320 ? 14 : Dimensions.get('window').width <= 375 ? 16 : 18,
   },
 });

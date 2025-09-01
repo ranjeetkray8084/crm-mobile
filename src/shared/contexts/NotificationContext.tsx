@@ -4,10 +4,30 @@ import Constants from 'expo-constants';
 
 // Import expo-notifications with error handling
 let Notifications: any = null;
+let Network: any = null;
+
 try {
   Notifications = require('expo-notifications');
 } catch (error) {
   console.log('⚠️ expo-notifications not available in NotificationContext:', error);
+}
+
+try {
+  Network = require('expo-network');
+} catch (error) {
+  console.log('⚠️ expo-network not available in NotificationContext:', error);
+}
+
+// Disable problematic imports for development
+const isDevelopment = __DEV__;
+const isExpoGo = Constants.appOwnership === 'expo';
+const isDevelopmentBuild = Constants.appOwnership === 'standalone' || Constants.appOwnership === 'unknown';
+
+if (isDevelopment) {
+  console.log('🔧 Development mode: Using simplified notification context');
+  console.log('🔧 App ownership:', Constants.appOwnership);
+  console.log('🔧 Is Expo Go:', isExpoGo);
+  console.log('🔧 Is Development Build:', isDevelopmentBuild);
 }
 
 interface NotificationContextType {
@@ -27,7 +47,19 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
   if (!context) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    console.warn('useNotifications must be used within a NotificationProvider');
+    // Return a fallback context instead of throwing an error
+    return {
+      expoNotificationsAvailable: false,
+      requestPermissions: async () => false,
+      scheduleNotification: async () => null,
+      sendImmediateNotification: async () => null,
+      cancelNotification: async () => {},
+      cancelAllNotifications: async () => {},
+      getBadgeCount: async () => 0,
+      setBadgeCount: async () => {},
+      isSupported: false,
+    };
   }
   return context;
 };
@@ -39,6 +71,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   useEffect(() => {
     const checkNotificationSupport = async () => {
       try {
+        // In development mode with Expo Go, disable notifications to avoid errors
+        if (isDevelopment && isExpoGo) {
+          setExpoNotificationsAvailable(false);
+          setIsSupported(false);
+          console.log('🔧 Development mode (Expo Go): Notifications disabled to avoid native module errors');
+          return;
+        }
+
         // Check if we're running in Expo Go
         const appOwnership = Constants.appOwnership;
         const isExpoGo = appOwnership === 'expo';
@@ -48,6 +88,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.log('🔔 DEBUG: Is Expo Go:', isExpoGo);
         console.log('🔔 DEBUG: Is Development Build:', isDevelopmentBuild);
         console.log('🔔 DEBUG: Notifications object available:', !!Notifications);
+        console.log('🔔 DEBUG: Network object available:', !!Network);
 
         if (Notifications && !isExpoGo) {
           setExpoNotificationsAvailable(true);
@@ -60,7 +101,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } else {
           setExpoNotificationsAvailable(false);
           setIsSupported(false);
-          console.log('❌ Notifications not available');
+          console.log('❌ Notifications not available - using fallback mode');
         }
       } catch (error) {
         console.error('NotificationContext: Error checking notification support:', error);

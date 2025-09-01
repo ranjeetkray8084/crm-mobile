@@ -304,39 +304,43 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({
         {/* Status */}
         <View style={styles.field}>
           <Text style={styles.label}>Status *</Text>
-          <View style={styles.pickerContainer}>
-            <TouchableOpacity
-              style={[styles.pickerOption, form.status === 'AVAILABLE_FOR_SALE' && styles.pickerOptionSelected]}
-              onPress={() => handleChange('status', 'AVAILABLE_FOR_SALE')}
-            >
-              <Text style={[styles.pickerOptionText, form.status === 'AVAILABLE_FOR_SALE' && styles.pickerOptionTextSelected]}>
-                Available for Sale
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.pickerOption, form.status === 'AVAILABLE_FOR_RENT' && styles.pickerOptionSelected]}
-              onPress={() => handleChange('status', 'AVAILABLE_FOR_RENT')}
-            >
-              <Text style={[styles.pickerOptionText, form.status === 'AVAILABLE_FOR_RENT' && styles.pickerOptionTextSelected]}>
-                Available for Rent
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.pickerOption, form.status === 'RENT_OUT' && styles.pickerOptionSelected]}
-              onPress={() => handleChange('status', 'RENT_OUT')}
-            >
-              <Text style={[styles.pickerOptionText, form.status === 'RENT_OUT' && styles.pickerOptionTextSelected]}>
-                Rented Out
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.pickerOption, form.status === 'SOLD_OUT' && styles.pickerOptionSelected]}
-              onPress={() => handleChange('status', 'SOLD_OUT')}
-            >
-              <Text style={[styles.pickerOptionText, form.status === 'SOLD_OUT' && styles.pickerOptionTextSelected]}>
-                Sold Out
-              </Text>
-            </TouchableOpacity>
+          <View style={styles.statusContainer}>
+            <View style={styles.statusRow}>
+              <TouchableOpacity
+                style={[styles.statusOption, form.status === 'AVAILABLE_FOR_SALE' && styles.statusOptionSelected]}
+                onPress={() => handleChange('status', 'AVAILABLE_FOR_SALE')}
+              >
+                <Text style={[styles.statusOptionText, form.status === 'AVAILABLE_FOR_SALE' && styles.statusOptionTextSelected]}>
+                  Available for Sale
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.statusOption, form.status === 'AVAILABLE_FOR_RENT' && styles.statusOptionSelected]}
+                onPress={() => handleChange('status', 'AVAILABLE_FOR_RENT')}
+              >
+                <Text style={[styles.statusOptionText, form.status === 'AVAILABLE_FOR_RENT' && styles.statusOptionTextSelected]}>
+                  Available for Rent
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.statusRow}>
+              <TouchableOpacity
+                style={[styles.statusOption, form.status === 'RENT_OUT' && styles.statusOptionSelected]}
+                onPress={() => handleChange('status', 'RENT_OUT')}
+              >
+                <Text style={[styles.statusOptionText, form.status === 'RENT_OUT' && styles.statusOptionTextSelected]}>
+                  Rented Out
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.statusOption, form.status === 'SOLD_OUT' && styles.statusOptionSelected]}
+                onPress={() => handleChange('status', 'SOLD_OUT')}
+              >
+                <Text style={[styles.statusOptionText, form.status === 'SOLD_OUT' && styles.statusOptionTextSelected]}>
+                  Sold Out
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -525,14 +529,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    justifyContent: 'flex-start',
   },
   pickerOption: {
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#d1d5db',
     backgroundColor: 'white',
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pickerOptionSelected: {
     backgroundColor: '#16a34a',
@@ -540,10 +548,13 @@ const styles = StyleSheet.create({
   },
   pickerOptionText: {
     color: '#374151',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   pickerOptionTextSelected: {
     color: 'white',
+    fontWeight: '600',
   },
   sizeContainer: {
     flexDirection: 'row',
@@ -576,6 +587,39 @@ const styles = StyleSheet.create({
   },
   sizeUnitTextSelected: {
     color: 'white',
+  },
+  statusContainer: {
+    gap: 8,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statusOption: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    backgroundColor: 'white',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  statusOptionSelected: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+  statusOptionText: {
+    color: '#374151',
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  statusOptionTextSelected: {
+    color: 'white',
+    fontWeight: '600',
   },
   buttonContainer: {
     flexDirection: 'row',

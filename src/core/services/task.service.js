@@ -104,8 +104,14 @@ export class TaskService {
     }
   }
 
-  // ✅ Add new row to Excel
+  // ✅ Add new row to Excel (local only - same as crm-frontend)
   static async addNewRow(taskId, companyId) {
+    // Return success immediately for local handling
+    // Backend API call disabled (same as crm-frontend implementation)
+    return { success: true, message: 'Row added locally only (backend sync disabled)' };
+    
+    // Optional: Backend API call (disabled for now)
+    /*
     try {
       const response = await axios.post(API_ENDPOINTS.TASKS.ADD_ROW(taskId), null, {
         params: { companyId }
@@ -114,10 +120,17 @@ export class TaskService {
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to add new row' };
     }
+    */
   }
 
-  // ✅ Add new column to Excel
+  // ✅ Add new column to Excel (local only - same as crm-frontend)
   static async addNewColumn(taskId, companyId) {
+    // Return success immediately for local handling
+    // Backend API call disabled (same as crm-frontend implementation)
+    return { success: true, message: 'Column added locally only (backend sync disabled)' };
+    
+    // Optional: Backend API call (disabled for now)
+    /*
     try {
       const response = await axios.post(API_ENDPOINTS.TASKS.ADD_COLUMN(taskId), null, {
         params: { companyId }
@@ -126,6 +139,7 @@ export class TaskService {
     } catch (error) {
       return { success: false, error: error.response?.data?.message || 'Failed to add new column' };
     }
+    */
   }
 
   // ✅ Delete selected columns from Excel

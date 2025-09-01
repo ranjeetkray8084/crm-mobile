@@ -117,7 +117,7 @@ export default {
       // [
       //   "@react-native-firebase/messaging",
       //   {
-      //     "android_package_name": "com.ranjeet1620.crmnativeexpo"
+      //     "android_package_name": "com.ranjeet1620.crmnativeexpo",
       //     "google_services_file": "./android/app/google-services.json"
       //   }
       // ],

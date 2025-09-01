@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,9 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  Pressable,
+  Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTasks } from '../../core/hooks/useTasks';
@@ -89,8 +91,74 @@ const TaskPreviewModal: React.FC<TaskPreviewModalProps> = ({
     return letter;
   };
 
-  const handleCellUpdate = async (rowIndex: number, colIndex: number, newValue: string) => {
+  // Phone number detection and calling functionality
+  const isPhoneNumber = (text: string): boolean => {
+    if (!text) return false;
+    // Remove spaces, dashes, parentheses, and plus signs for validation
+    const cleanText = text.replace(/[\s\-\(\)\+]/g, '');
+    // Check if it's a valid phone number (7-15 digits)
+    return /^\d{7,15}$/.test(cleanText);
+  };
+
+  const formatPhoneNumber = (text: string): string => {
+    if (!text) return '';
+    // Remove all non-digit characters except +
+    const cleanText = text.replace(/[^\d\+]/g, '');
+    // If it doesn't start with +, add country code (assume India +91)
+    if (!cleanText.startsWith('+')) {
+      return `+91${cleanText}`;
+    }
+    return cleanText;
+  };
+
+  const handlePhoneCall = (phoneNumber: string) => {
+    const formattedNumber = formatPhoneNumber(phoneNumber);
+    
+    Alert.alert(
+      'Make Phone Call',
+      `Do you want to call ${formattedNumber}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Call',
+          onPress: () => {
+            Linking.openURL(`tel:${formattedNumber}`).catch(err => {
+              console.error('❌ Error making call:', err);
+              Alert.alert('Error', 'Unable to make call. Please try again.');
+            });
+          }
+        }
+      ]
+    );
+  };
+
+  const handleCellPress = (rowIndex: number, colIndex: number, cellValue: string) => {
+    // Check if the cell contains a phone number
+    if (isPhoneNumber(cellValue)) {
+      handlePhoneCall(cellValue);
+    } else {
+      // If not a phone number, start editing
+      startEditing(rowIndex, colIndex, cellValue);
+    }
+  };
+
+  const getCellTextStyle = (cellValue: string) => {
+    if (isPhoneNumber(cellValue)) {
+      return [styles.cellText, styles.phoneNumberText];
+    }
+    return styles.cellText;
+  };
+
+    const handleCellUpdate = useCallback(async (rowIndex: number, colIndex: number, newValue: string) => {
+    console.log('🔄 Updating cell [', rowIndex, ',', colIndex, '] from:', data[rowIndex]?.[colIndex], 'to:', newValue);
+    
     const oldValue = data[rowIndex]?.[colIndex] || '';
+    
+    // If no change, skip update
+    if (oldValue === newValue) {
+      console.log('⏭️ No change in value, skipping update');
+      return;
+    }
     
     // Add to undo stack
     setUndoStack(prev => [...prev, { 
@@ -101,74 +169,154 @@ const TaskPreviewModal: React.FC<TaskPreviewModalProps> = ({
       newValue 
     }]);
 
-    // Update local data immediately
-    const newData = [...data];
-    if (!newData[rowIndex]) {
-      newData[rowIndex] = [];
-    }
-    newData[rowIndex][colIndex] = newValue;
-    setData(newData);
-
-    // Update on server
-    try {
-      console.log('🔄 Updating cell [', rowIndex, ',', colIndex, '] to:', newValue);
-      const result = await updateCell(taskId, rowIndex, colIndex, newValue);
-      if (result.success) {
-        console.log('✅ Cell updated successfully');
-        // Clear any previous errors
-        if (error) setError('');
-        showSuccessMessage('Cell updated successfully');
-      } else {
-        console.error('❌ Failed to update cell:', result.error);
-        // Revert on failure
-        const revertedData = [...data];
-        revertedData[rowIndex][colIndex] = oldValue;
-        setData(revertedData);
-        setError(result.error || 'Failed to update cell');
+    // Update only the specific cell in local data immediately
+    setData(prevData => {
+      const newData = [...prevData];
+      
+      // Handle empty data case - create rows if needed
+      if (newData.length === 0) {
+        console.log('📄 Creating initial data structure');
+        const maxCols = Math.max(colIndex + 1, 5);
+        newData.push(Array(maxCols).fill(''));
       }
-    } catch (err) {
-      console.error('❌ Error updating cell:', err);
-      // Revert on error
-      const revertedData = [...data];
-      revertedData[rowIndex][colIndex] = oldValue;
-      setData(revertedData);
-      setError('Failed to update cell');
-    }
-  };
+      
+      // Ensure row exists
+      if (!newData[rowIndex]) {
+        const maxCols = newData.length > 0 ? Math.max(...newData.map(row => row.length)) : 5;
+        newData[rowIndex] = Array(Math.max(maxCols, colIndex + 1)).fill('');
+      }
+      
+      // Ensure column exists in row
+      while (newData[rowIndex].length <= colIndex) {
+        newData[rowIndex].push('');
+      }
+      
+      // Update only the specific cell
+      newData[rowIndex][colIndex] = newValue;
+      console.log('✅ Cell updated locally:', newData[rowIndex][colIndex]);
+      
+      return newData;
+    });
+
+    // Update on server in background (non-blocking)
+    setTimeout(async () => {
+      try {
+        console.log('🌐 Sending update to server...');
+        const result = await updateCell(taskId, rowIndex, colIndex, newValue);
+        if (result.success) {
+          console.log('✅ Cell updated successfully on server');
+          // Clear any previous errors
+          if (error) setError('');
+          showSuccessMessage('Cell updated successfully');
+        } else {
+          console.error('❌ Failed to update cell on server:', result.error);
+          // Revert on failure - only the specific cell
+          setData(prevData => {
+            const revertedData = [...prevData];
+            if (revertedData[rowIndex]) {
+              revertedData[rowIndex][colIndex] = oldValue;
+              console.log('🔄 Reverted cell to old value:', oldValue);
+            }
+            return revertedData;
+          });
+          setError(result.error || 'Failed to update cell');
+        }
+      } catch (err) {
+        console.error('❌ Error updating cell on server:', err);
+        // Revert on error - only the specific cell
+        setData(prevData => {
+          const revertedData = [...prevData];
+          if (revertedData[rowIndex]) {
+            revertedData[rowIndex][colIndex] = oldValue;
+            console.log('🔄 Reverted cell to old value due to error:', oldValue);
+          }
+          return revertedData;
+        });
+        setError('Failed to update cell');
+      }
+    }, 0);
+  }, [data, taskId, updateCell, error]);
 
   const handleAddRow = async () => {
     try {
+      console.log('🔄 Adding new row - Current data:', data.length, 'rows');
+      
+      // Calculate max columns from existing data, ensure minimum of 5
+      const maxCols = data.length > 0 ? Math.max(...data.map(row => row.length), 5) : 5;
+      console.log('📊 Max columns calculated:', maxCols);
+      
+      // Create new empty row
+      const newRow = Array(maxCols).fill('');
+      console.log('➕ New row created:', newRow);
+      
+      // Add to data
+      setData(prev => {
+        const updated = [...prev, newRow];
+        console.log('✅ Data updated - New total rows:', updated.length);
+        return updated;
+      });
+      
+      // Clear any existing errors
+      if (error) setError('');
+      
+      showSuccessMessage('New row added successfully');
+      
+      // Optional: Backend API call (disabled for now, same as crm-frontend)
+      // Uncomment if backend endpoint is available
+      /*
       const result = await addNewRow(taskId);
-      if (result.success) {
-        // Add empty row to local data
-        const maxCols = data.length > 0 ? Math.max(...data.map(row => row.length)) : 5;
-        const newRow = Array(maxCols).fill('');
-        setData(prev => [...prev, newRow]);
-        showSuccessMessage('New row added successfully');
-      } else {
-        setError(result.error || 'Failed to add row');
+      if (!result.success) {
+        // Revert on failure
+        setData(prev => prev.slice(0, -1));
+        setError(result.error || 'Failed to add row to backend');
       }
+      */
     } catch (err) {
-      setError('Failed to add row');
+      console.error('❌ Error adding row:', err);
+      setError('Failed to add row: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
   const handleAddColumn = async () => {
     try {
-      const result = await addNewColumn(taskId);
-      if (result.success) {
-        // Add empty column to all rows
-        const newData = data.map(row => [...row, '']);
-        if (newData.length === 0) {
-          newData.push(['']);
-        }
-        setData(newData);
-        showSuccessMessage('New column added successfully');
-      } else {
-        setError(result.error || 'Failed to add column');
+      console.log('🔄 Adding new column - Current data:', data.length, 'rows');
+      
+      // Add empty column to all existing rows
+      let newData = data.map((row, index) => {
+        const newRow = [...row, ''];
+        console.log(`📝 Row ${index} updated:`, newRow.length, 'columns');
+        return newRow;
+      });
+      
+      // If no data exists, create first row with empty column
+      if (newData.length === 0) {
+        console.log('📄 No data exists, creating first row with 5 columns');
+        newData.push(Array(5).fill(''));
       }
+      
+      console.log('✅ New data structure:', newData.length, 'rows with', newData[0]?.length || 0, 'columns');
+      
+      setData(newData);
+      
+      // Clear any existing errors
+      if (error) setError('');
+      
+      showSuccessMessage('New column added successfully');
+      
+      // Optional: Backend API call (disabled for now, same as crm-frontend)
+      // Uncomment if backend endpoint is available
+      /*
+      const result = await addNewColumn(taskId);
+      if (!result.success) {
+        // Revert on failure - remove the added column
+        const revertedData = data.map(row => row.slice(0, -1));
+        setData(revertedData);
+        setError(result.error || 'Failed to add column to backend');
+      }
+      */
     } catch (err) {
-      setError('Failed to add column');
+      console.error('❌ Error adding column:', err);
+      setError('Failed to add column: ' + (err instanceof Error ? err.message : 'Unknown error'));
     }
   };
 
@@ -228,12 +376,12 @@ const TaskPreviewModal: React.FC<TaskPreviewModalProps> = ({
     }
   };
 
-  const showSuccessMessage = (message: string) => {
+  const showSuccessMessage = useCallback((message: string) => {
     setSuccessMessage(message);
     setTimeout(() => setSuccessMessage(''), 3000); // Auto-hide after 3 seconds
-  };
+  }, []);
 
-  const handleColumnSelect = (colIndex: number) => {
+  const handleColumnSelect = useCallback((colIndex: number) => {
     const newSelected = new Set(selectedColumns);
     if (newSelected.has(colIndex)) {
       newSelected.delete(colIndex);
@@ -241,29 +389,75 @@ const TaskPreviewModal: React.FC<TaskPreviewModalProps> = ({
       newSelected.add(colIndex);
     }
     setSelectedColumns(newSelected);
-  };
+  }, [selectedColumns]);
 
-  const startEditing = (rowIndex: number, colIndex: number, value: string) => {
-    setEditingCell({ row: rowIndex, col: colIndex });
-    setEditValue(value || '');
-  };
+  const startEditing = useCallback((rowIndex: number, colIndex: number, value: string) => {
+    console.log('🔄 Starting edit for cell [', rowIndex, ',', colIndex, '] with value:', value);
+    // Use requestAnimationFrame for immediate UI update
+    requestAnimationFrame(() => {
+      setEditingCell({ row: rowIndex, col: colIndex });
+      setEditValue(value || '');
+    });
+  }, []);
 
-  const finishEditing = () => {
+  const finishEditing = useCallback(() => {
     if (editingCell) {
+      console.log('✅ Finishing edit for cell [', editingCell.row, ',', editingCell.col, '] with value:', editValue);
       handleCellUpdate(editingCell.row, editingCell.col, editValue);
-      setEditingCell(null);
-      setEditValue('');
+      // Use requestAnimationFrame for immediate UI update
+      requestAnimationFrame(() => {
+        setEditingCell(null);
+        setEditValue('');
+      });
     }
-  };
+  }, [editingCell, editValue]);
 
-  const cancelEditing = () => {
+  const finishEditingAndMoveNext = useCallback(() => {
+    if (editingCell) {
+      console.log('✅ Finishing edit and moving to next row');
+      handleCellUpdate(editingCell.row, editingCell.col, editValue);
+      
+      // Move to next row, same column
+      const nextRow = editingCell.row + 1;
+      const currentCol = editingCell.col;
+      
+      // Use requestAnimationFrame for immediate UI update
+      requestAnimationFrame(() => {
+        // Clear current editing
+        setEditingCell(null);
+        setEditValue('');
+        
+        // If next row doesn't exist, create it immediately
+        if (nextRow >= data.length) {
+          console.log('📝 Creating new row for navigation');
+          const maxCols = data.length > 0 ? Math.max(...data.map(row => row.length), 5) : 5;
+          const newRow = Array(maxCols).fill('');
+          setData(prev => [...prev, newRow]);
+        }
+        
+        // Start editing next cell immediately in next frame
+        requestAnimationFrame(() => {
+          setEditingCell({ row: nextRow, col: currentCol });
+          setEditValue('');
+        });
+      });
+    }
+  }, [editingCell, editValue, data.length]);
+
+  const cancelEditing = useCallback(() => {
+    console.log('❌ Canceling edit');
     setEditingCell(null);
     setEditValue('');
-  };
+  }, []);
+
+  const maxCols = useMemo(() => {
+    return data.length > 0 ? Math.max(...data.map(row => row.length)) : 0;
+  }, [data]);
+  
+  // Debug logging
+  console.log('🔍 TaskPreviewModal render - Data:', data.length, 'rows, MaxCols:', maxCols);
 
   if (!isVisible) return null;
-
-  const maxCols = data.length > 0 ? Math.max(...data.map(row => row.length)) : 0;
 
   return (
     <Modal
@@ -365,7 +559,7 @@ const TaskPreviewModal: React.FC<TaskPreviewModalProps> = ({
                     </View>
                     {Array.from({ length: maxCols }, (_, colIndex) => (
                       <TouchableOpacity
-                        key={colIndex}
+                        key={`header-${colIndex}`}
                         style={[
                           styles.headerCell,
                           selectedColumns.has(colIndex) && styles.selectedHeaderCell
@@ -390,46 +584,104 @@ const TaskPreviewModal: React.FC<TaskPreviewModalProps> = ({
                   </View>
 
                   {/* Data Rows */}
-                  {data.map((row, rowIndex) => {
-                    // Skip first row if it's used as header
-                    const isHeaderRow = rowIndex === 0 && data[0]?.some(cell => cell !== null && cell !== '');
-                    if (isHeaderRow) return null;
-
-                    return (
-                      <View key={rowIndex} style={styles.tableRow}>
-                        <View style={[styles.cell, styles.rowHeaderCell]}>
-                          <Text style={styles.rowHeaderText}>
-                            {isHeaderRow ? rowIndex : rowIndex + 1}
-                          </Text>
-                        </View>
-                        {Array.from({ length: maxCols }, (_, colIndex) => (
-                          <View key={colIndex} style={styles.cell}>
-                            {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
-                              <TextInput
-                                value={editValue}
-                                onChangeText={setEditValue}
-                                onBlur={finishEditing}
-                                onSubmitEditing={finishEditing}
-                                onEndEditing={cancelEditing}
-                                style={styles.cellInput}
-                                autoFocus
-                                multiline
-                              />
-                            ) : (
-                              <TouchableOpacity
-                                style={styles.cellContent}
-                                onPress={() => startEditing(rowIndex, colIndex, row[colIndex] || '')}
-                              >
-                                <Text style={styles.cellText} numberOfLines={3}>
-                                  {row[colIndex] || ''}
-                                </Text>
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        ))}
+                  {data.length === 0 ? (
+                    // Show empty state
+                    <View style={styles.tableRow}>
+                      <View style={[styles.cell, styles.rowHeaderCell]}>
+                        <Text style={styles.rowHeaderText}>1</Text>
                       </View>
-                    );
-                  })}
+                      {Array.from({ length: Math.max(maxCols, 5) }, (_, colIndex) => (
+                        <View key={`empty-cell-${colIndex}`} style={styles.cell}>
+                                                     {editingCell?.row === 0 && editingCell?.col === colIndex ? (
+                             <TextInput
+                               value={editValue}
+                               onChangeText={setEditValue}
+                               onBlur={finishEditing}
+                               onSubmitEditing={finishEditingAndMoveNext}
+                               style={styles.cellInput}
+                               autoFocus={true}
+                               multiline={false}
+                               selectTextOnFocus={true}
+                               blurOnSubmit={false}
+                               returnKeyType="next"
+                               keyboardType="default"
+                               autoCapitalize="none"
+                               autoCorrect={false}
+                               spellCheck={false}
+                               maxLength={1000}
+                               contextMenuHidden={true}
+                             />
+                                                     ) : (
+                                                          <Pressable
+                                style={({ pressed }) => [
+                                  styles.cellContent,
+                                  pressed && { opacity: 0.7 }
+                                ]}
+                                onPress={() => handleCellPress(0, colIndex, '')}
+                                android_ripple={{ color: '#e5e7eb', borderless: true }}
+                              >
+                                <Text style={getCellTextStyle('')} numberOfLines={3}>
+                                  
+                                </Text>
+                              </Pressable>
+                           )}
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    data.map((row, rowIndex) => {
+                      // Skip first row if it's used as header
+                      const isHeaderRow = rowIndex === 0 && data[0]?.some(cell => cell !== null && cell !== '');
+                      if (isHeaderRow) return null;
+
+                      return (
+                        <View key={`row-${rowIndex}`} style={styles.tableRow}>
+                          <View style={[styles.cell, styles.rowHeaderCell]}>
+                            <Text style={styles.rowHeaderText}>
+                              {isHeaderRow ? rowIndex : rowIndex + 1}
+                            </Text>
+                          </View>
+                          {Array.from({ length: maxCols }, (_, colIndex) => (
+                            <View key={`cell-${rowIndex}-${colIndex}`} style={styles.cell}>
+                                                           {editingCell?.row === rowIndex && editingCell?.col === colIndex ? (
+                               <TextInput
+                                 value={editValue}
+                                 onChangeText={setEditValue}
+                                 onBlur={finishEditing}
+                                 onSubmitEditing={finishEditingAndMoveNext}
+                                 style={styles.cellInput}
+                                 autoFocus={true}
+                                 multiline={false}
+                                 selectTextOnFocus={true}
+                                 blurOnSubmit={false}
+                                 returnKeyType="next"
+                                 keyboardType="default"
+                                 autoCapitalize="none"
+                                 autoCorrect={false}
+                                 spellCheck={false}
+                                 maxLength={1000}
+                                 contextMenuHidden={true}
+                               />
+                                                             ) : (
+                                                                <Pressable
+                                  style={({ pressed }) => [
+                                    styles.cellContent,
+                                    pressed && { opacity: 0.7 }
+                                  ]}
+                                  onPress={() => handleCellPress(rowIndex, colIndex, row[colIndex] || '')}
+                                  android_ripple={{ color: '#e5e7eb', borderless: true }}
+                                >
+                                                                       <Text style={getCellTextStyle(row[colIndex] || '')} numberOfLines={3}>
+                                      {row[colIndex] || ''}
+                                    </Text>
+                                   </Pressable>
+                               )}
+                            </View>
+                          ))}
+                        </View>
+                      );
+                    })
+                  )}
                 </View>
               </ScrollView>
             </ScrollView>
@@ -616,11 +868,21 @@ const styles = StyleSheet.create({
     color: '#111827',
     backgroundColor: '#eff6ff',
     borderRadius: 4,
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    minHeight: 0,
+    paddingVertical: 4,
   },
   cellText: {
     fontSize: 14,
     color: '#111827',
     textAlign: 'center',
+  },
+  phoneNumberText: {
+    color: '#3b82f6',
+    textDecorationLine: 'underline',
+    fontWeight: '500',
   },
   rowHeaderText: {
     fontSize: 14,

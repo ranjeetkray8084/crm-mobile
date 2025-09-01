@@ -338,8 +338,14 @@ export const useTasks = (companyId, userId, role) => {
     }
   }, [companyId]);
 
-  // Add new row
+  // Add new row (local only - same as crm-frontend)
   const addNewRow = useCallback(async (taskId) => {
+    // Return success immediately for local handling
+    // Backend API call disabled (same as crm-frontend implementation)
+    return { success: true, message: 'Row added locally' };
+    
+    // Optional: Backend API call (disabled for now)
+    /*
     if (!companyId) {
       return { success: false, error: 'Company ID is required' };
     }
@@ -350,10 +356,17 @@ export const useTasks = (companyId, userId, role) => {
     } catch (error) {
       return { success: false, error: 'Failed to add new row' };
     }
-  }, [companyId]);
+    */
+  }, []);
 
-  // Add new column
+  // Add new column (local only - same as crm-frontend)
   const addNewColumn = useCallback(async (taskId) => {
+    // Return success immediately for local handling
+    // Backend API call disabled (same as crm-frontend implementation)
+    return { success: true, message: 'Column added locally' };
+    
+    // Optional: Backend API call (disabled for now)
+    /*
     if (!companyId) {
       return { success: false, error: 'Company ID is required' };
     }
@@ -364,7 +377,8 @@ export const useTasks = (companyId, userId, role) => {
     } catch (error) {
       return { success: false, error: 'Failed to add new column' };
     }
-  }, [companyId]);
+    */
+  }, []);
 
   // Delete selected columns
   const deleteSelectedColumns = useCallback(async (taskId, columnIndices) => {

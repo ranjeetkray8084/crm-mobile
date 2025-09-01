@@ -6,11 +6,11 @@ const AuthContext = createContext();
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    console.error('useAuth must be used within an AuthProvider');
+    console.warn('useAuth must be used within an AuthProvider - this is expected during initial render');
     // Return a fallback context instead of throwing an error
     return {
       user: null,
-      loading: false,
+      loading: true,
       isAuthenticated: false,
       isReady: false,
       error: 'Auth context not available',

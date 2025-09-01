@@ -332,7 +332,7 @@ const AddLeadForm: React.FC<AddLeadFormProps> = ({ onSuccess, onCancel }) => {
         {/* Transaction Type Selection */}
         {formData.propertyType && (
           <View style={styles.field}>
-            <Text style={styles.label}>Transaction Type *</Text>
+            <Text style={styles.label}>Type *</Text>
             <View style={styles.pickerContainer}>
               {formData.propertyType === 'Commercial' ? (
                 <>

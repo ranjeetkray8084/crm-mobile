@@ -34,8 +34,7 @@ export default function Sidebar({
   const getMenuItems = () => {
     const commonItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline' },
-      { id: 'notificationTest', label: '🔔 Test Notifications', icon: 'notifications-outline' },
-    { id: 'tokenStatus', label: '🔑 Token Status', icon: 'key-outline' },
+    
     ];
 
     const roleSpecificItems = {

@@ -1,5 +1,7 @@
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import TokenRegistrationService from './TokenRegistrationService';
+import { getApiBaseUrl, API_ENDPOINTS } from '../config/api.config';
 
 // Import expo-notifications with error handling
 let Notifications: any = null;
@@ -28,7 +30,7 @@ class NotificationService {
 
   constructor() {
     this.isExpoGo = Constants.appOwnership === 'expo';
-    this.isDevelopmentBuild = Constants.appOwnership === 'standalone' || Constants.appOwnership === 'unknown';
+    this.isDevelopmentBuild = Constants.appOwnership === 'standalone' || Constants.appOwnership === null;
     this.notificationsAvailable = !!(Notifications && !this.isExpoGo);
     this.tokenRegistrationService = TokenRegistrationService.getInstance();
     
@@ -107,14 +109,62 @@ class NotificationService {
     try {
       console.log('🔔 DEBUG: Setting up notification listeners...');
       
-      // Listen for notifications received while app is in foreground
-      const foregroundListener = Notifications.addNotificationReceivedListener(notification => {
-        console.log('🔔 DEBUG: Foreground notification received:', notification);
+      // Set up Firebase messaging listeners (fallback)
+      try {
+        const messaging = await import('@react-native-firebase/messaging');
+        
+        // Listen for foreground messages
+        const unsubscribeForeground = messaging.default().onMessage(async (remoteMessage: any) => {
+          console.log('🔔 DEBUG: Firebase foreground message received:', remoteMessage);
+          
+          // Show local notification for foreground messages
+          if (remoteMessage.notification) {
+            await this.sendImmediateNotification({
+              title: remoteMessage.notification.title || 'New Notification',
+              body: remoteMessage.notification.body || 'You have a new message',
+              data: remoteMessage.data,
+              sound: true,
+              priority: 'high'
+            });
+          }
+        });
+
+        // Listen for background messages
+        messaging.default().setBackgroundMessageHandler(async (remoteMessage: any) => {
+          console.log('🔔 DEBUG: Firebase background message received:', remoteMessage);
+        });
+
+        // Listen for notification taps when app is in background
+        messaging.default().onNotificationOpenedApp((remoteMessage: any) => {
+          console.log('🔔 DEBUG: Firebase notification opened app:', remoteMessage);
+          this.handleNotificationTap({ notification: { request: { content: { data: remoteMessage.data } } } });
+        });
+
+        // Check if app was opened from a notification
+        messaging.default().getInitialNotification().then((remoteMessage: any) => {
+          if (remoteMessage) {
+            console.log('🔔 DEBUG: App opened from notification:', remoteMessage);
+            this.handleNotificationTap({ notification: { request: { content: { data: remoteMessage.data } } } });
+          }
+        });
+
+        console.log('✅ DEBUG: Firebase messaging listeners set up successfully');
+        
+      } catch (firebaseError) {
+        console.error('❌ DEBUG: Error setting up Firebase listeners:', firebaseError);
+      }
+      
+      // Set up Expo notification listeners (primary for Expo push notifications)
+      const foregroundListener = Notifications.addNotificationReceivedListener((notification: any) => {
+        console.log('🔔 DEBUG: Expo foreground notification received:', notification);
+        console.log('🔔 DEBUG: Notification data:', notification.request.content.data);
+        console.log('🔔 DEBUG: Notification title:', notification.request.content.title);
+        console.log('🔔 DEBUG: Notification body:', notification.request.content.body);
       });
 
-      // Listen for user interaction with notifications
-      const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
-        console.log('🔔 DEBUG: User interacted with notification:', response);
+      const responseListener = Notifications.addNotificationResponseReceivedListener((response: any) => {
+        console.log('🔔 DEBUG: Expo notification response received:', response);
+        console.log('🔔 DEBUG: Response data:', response.notification.request.content.data);
         this.handleNotificationTap(response);
       });
 
@@ -122,7 +172,7 @@ class NotificationService {
       this.notificationListener = foregroundListener;
       this.responseListener = responseListener;
       
-      console.log('✅ DEBUG: Notification listeners set up successfully');
+      console.log('✅ DEBUG: All notification listeners set up successfully');
       
     } catch (error) {
       console.error('❌ DEBUG: Error setting up notification listeners:', error);
@@ -228,40 +278,52 @@ class NotificationService {
           return null;
         }
 
-        // Get Expo push token (since Firebase is not configured yet)
+        // Get Expo push token (primary method since backend is sending Expo notifications)
         console.log('🔔 DEBUG: Getting Expo push token...');
         
         try {
-          // Request permissions first
-          const { status } = await Notifications.requestPermissionsAsync();
-          console.log('🔔 DEBUG: Permission status:', status);
-          
-          if (status !== 'granted') {
-            console.log('⚠️ DEBUG: Notification permissions not granted');
-            return null;
-          }
-
-          // Get the real Expo push token
           const expoPushToken = await Notifications.getExpoPushTokenAsync({
             projectId: 'e54487e4-0b6f-4429-8b02-f1c84f6b0bba',
             experienceId: '@ranjeet1620/crmnativeexpo'
           });
           
           console.log('✅ DEBUG: Expo push token obtained:', expoPushToken.data.substring(0, 20) + '...');
-          console.log('✅ DEBUG: Full token length:', expoPushToken.data.length);
-          console.log('🔔 DEBUG: Token type:', expoPushToken.type);
-          
+          console.log('✅ DEBUG: Full Expo token length:', expoPushToken.data.length);
+          console.log('🔔 DEBUG: Token type: Expo');
           return expoPushToken.data;
           
         } catch (expoError: any) {
           console.error('❌ DEBUG: Error getting Expo push token:', expoError);
           console.error('❌ DEBUG: Expo error message:', expoError.message);
           
-          // Fallback: create simple token for testing
-          console.log('⚠️ DEBUG: Falling back to simple token for testing...');
-          const simpleToken = `expo-simple-token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          console.log('✅ DEBUG: Simple token created as fallback:', simpleToken.substring(0, 20) + '...');
-          return simpleToken;
+          // Fallback: Try Firebase FCM token
+          console.log('⚠️ DEBUG: Falling back to Firebase FCM token...');
+          try {
+            const messaging = await import('@react-native-firebase/messaging');
+            
+            const authStatus = await messaging.default().requestPermission();
+            console.log('🔔 DEBUG: FCM permission status:', authStatus);
+            
+            if (authStatus === messaging.default.AuthorizationStatus.AUTHORIZED || 
+                authStatus === messaging.default.AuthorizationStatus.PROVISIONAL) {
+              const fcmToken = await messaging.default().getToken();
+              console.log('✅ DEBUG: FCM token obtained:', fcmToken.substring(0, 20) + '...');
+              console.log('🔔 DEBUG: Token type: FCM');
+              return fcmToken;
+            } else {
+              console.log('⚠️ DEBUG: FCM permissions not granted');
+              return null;
+            }
+            
+          } catch (fcmError: any) {
+            console.error('❌ DEBUG: Error getting FCM token:', fcmError);
+            
+            // Final fallback: create simple token for testing
+            console.log('⚠️ DEBUG: Final fallback to simple token for testing...');
+            const simpleToken = `expo-simple-token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            console.log('✅ DEBUG: Simple token created as final fallback:', simpleToken.substring(0, 20) + '...');
+            return simpleToken;
+          }
         }
         
       } catch (expoError: any) {
@@ -283,56 +345,7 @@ class NotificationService {
     }
   }
 
-  async onUserLogin(): Promise<void> {
-    try {
-      console.log('🔔 DEBUG: NotificationService.onUserLogin() called');
-      console.log('🔔 DEBUG: TokenRegistrationService instance:', !!this.tokenRegistrationService);
-      
-      if (!this.tokenRegistrationService) {
-        console.error('❌ DEBUG: TokenRegistrationService is null! Cannot proceed with token registration');
-        return;
-      }
-      
-      // Get or generate push token
-      console.log('🔔 DEBUG: Calling getPushToken()...');
-      const token = await this.getPushToken();
-      console.log('🔔 DEBUG: getPushToken() result:', !!token, token ? token.substring(0, 20) + '...' : 'null');
-      
-      if (token) {
-        console.log('🔔 DEBUG: Token obtained, calling TokenRegistrationService.registerToken()...');
-        // Register token with backend
-        const result = await this.tokenRegistrationService.registerToken(token);
-        console.log('🔔 DEBUG: TokenRegistrationService.registerToken() result:', result);
-        
-        if (result?.success) {
-          console.log('✅ DEBUG: Token registered on login successfully');
-        } else {
-          console.error('❌ DEBUG: Token registration failed on login:', result?.error);
-        }
-      } else {
-        console.error('❌ DEBUG: No token available for registration on login');
-      }
-    } catch (error: any) {
-      console.error('❌ DEBUG: Error in onUserLogin():', error);
-      console.error('❌ DEBUG: Error stack:', error.stack);
-    }
-  }
-
-  async onUserLogout(): Promise<void> {
-    try {
-      console.log('🔔 DEBUG: User logged out, cleaning up push notification token...');
-      
-      // Deactivate token on backend
-      const result = await this.tokenRegistrationService?.deactivateToken();
-      if (result?.success) {
-        console.log('✅ DEBUG: Token deactivated on logout');
-      } else {
-        console.error('❌ DEBUG: Token deactivation failed on logout:', result?.error);
-      }
-    } catch (error) {
-      console.error('❌ DEBUG: Error cleaning up push token on logout:', error);
-    }
-  }
+  
 
   async scheduleLocalNotification(
     notification: NotificationData, 
@@ -491,6 +504,146 @@ class NotificationService {
   // Check if running in development build
   isRunningInDevelopmentBuild(): boolean {
     return this.isDevelopmentBuild;
+  }
+
+  // 🔔 PUSH NOTIFICATION TOKEN MANAGEMENT METHODS
+
+  /**
+   * Generate and register push token when user logs in
+   */
+  async onUserLogin(): Promise<string | null> {
+    try {
+      console.log('🔔 DEBUG: NotificationService.onUserLogin() called');
+      
+      if (!this.notificationsAvailable) {
+        console.log('⚠️ DEBUG: Notifications not available, skipping token generation');
+        return null;
+      }
+
+      // Check if we already have a token
+      const existingToken = await AsyncStorage.getItem('pushToken');
+      if (existingToken) {
+        console.log('✅ DEBUG: Existing push token found, re-registering with backend');
+        await this.tokenRegistrationService?.registerToken(existingToken);
+        return existingToken;
+      }
+
+      // Generate new token
+      console.log('🔔 DEBUG: Generating new push token...');
+      const token = await Notifications.getExpoPushTokenAsync({
+        projectId: 'e54487e4-0b6f-4429-8b02-f1c84f6b0bba', // From your app.config.js
+      });
+
+      if (token.data) {
+        console.log('✅ DEBUG: Push token generated:', token.data.substring(0, 20) + '...');
+        
+        // Save token locally
+        await AsyncStorage.setItem('pushToken', token.data);
+        
+        // Register with backend
+        if (this.tokenRegistrationService) {
+          const success = await this.tokenRegistrationService.registerToken(token.data);
+          if (success) {
+            console.log('✅ DEBUG: Push token registered successfully with backend');
+          } else {
+            console.log('⚠️ DEBUG: Failed to register token with backend, will retry later');
+          }
+        }
+        
+        return token.data;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ DEBUG: Error in onUserLogin:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Deactivate push token when user logs out
+   */
+  async onUserLogout(): Promise<void> {
+    try {
+      console.log('🔔 DEBUG: NotificationService.onUserLogout() called');
+      
+      if (!this.notificationsAvailable) {
+        console.log('⚠️ DEBUG: Notifications not available, skipping token deactivation');
+        return;
+      }
+
+      // Get current token
+      const currentToken = await AsyncStorage.getItem('pushToken');
+      if (currentToken && this.tokenRegistrationService) {
+        console.log('🔔 DEBUG: Deactivating push token on backend...');
+        
+        try {
+          const authToken = await AsyncStorage.getItem('token');
+          if (authToken) {
+            const baseURL = getApiBaseUrl();
+            const response = await fetch(`${baseURL}${API_ENDPOINTS.PUSH_NOTIFICATIONS.LOGOUT}`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (response.ok) {
+              console.log('✅ DEBUG: Push token deactivated successfully on backend');
+            } else {
+              console.log('⚠️ DEBUG: Failed to deactivate token on backend:', response.status);
+            }
+          }
+        } catch (error) {
+          console.error('❌ DEBUG: Error deactivating token on backend:', error);
+        }
+      }
+
+      // Clear local token
+      await AsyncStorage.removeItem('pushToken');
+      console.log('✅ DEBUG: Local push token cleared');
+      
+    } catch (error) {
+      console.error('❌ DEBUG: Error in onUserLogout:', error);
+    }
+  }
+
+  /**
+   * Get current push token
+   */
+  async getCurrentPushToken(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem('pushToken');
+    } catch (error) {
+      console.error('❌ DEBUG: Error getting current push token:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if push token is registered with backend
+   */
+  async isTokenRegistered(): Promise<boolean> {
+    try {
+      const token = await this.getCurrentPushToken();
+      if (!token) return false;
+
+      const authToken = await AsyncStorage.getItem('token');
+      if (!authToken) return false;
+
+      const baseURL = getApiBaseUrl();
+      const response = await fetch(`${baseURL}${API_ENDPOINTS.PUSH_NOTIFICATIONS.STATUS}`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      return response.ok;
+    } catch (error) {
+      console.error('❌ DEBUG: Error checking token registration status:', error);
+      return false;
+    }
   }
 }
 

@@ -13,7 +13,7 @@ import UserSection from './users/UserSection';
 import AdminSection from './admins/AdminSection';
 import Logo from "./common/Logo";
 import NotificationTest from './NotificationTest';
-import TokenStatusTest from './common/TokenStatusTest';
+
 
 
 interface DashboardProps {
@@ -121,13 +121,8 @@ export default function Dashboard({
             <NotificationTest />
           </View>
         );
-      case 'tokenStatus':
-        console.log('🔔 DEBUG: Dashboard: Rendering tokenStatus section');
-        return (
-          <View style={styles.dashboardSections}>
-            <TokenStatusTest />
-          </View>
-        );
+
+
       case 'users':
       case 'viewUsers':
         return <UserSection />;
@@ -184,39 +179,9 @@ export default function Dashboard({
             {/* Dashboard Stats Cards */}
             <DashboardStats />
             
-            {/* Push Notification Test Button */}
-            <View style={styles.dashboardSections}>
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>🔔 Push Notification Test</Text>
-                <Text style={styles.sectionDescription}>
-                  Test your push notification setup and permissions
-                </Text>
-                <TouchableOpacity
-                  style={[styles.testButton, styles.pushTestButton]}
-                  onPress={() => handleSectionChange('notificationTest')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.testButtonText}>🧪 Test Notifications</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* Token Status Button */}
-            <View style={styles.dashboardSections}>
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>🔑 Token Status</Text>
-                <Text style={styles.sectionDescription}>
-                  Check and manage your push notification token registration
-                </Text>
-                <TouchableOpacity
-                  style={[styles.testButton, styles.tokenStatusButton]}
-                  onPress={() => handleSectionChange('tokenStatus')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.testButtonText}>🔍 Check Token Status</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+
+
           </>
         );
     }
@@ -500,10 +465,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#10b981',
     marginTop: 12,
   },
-  tokenStatusButton: {
-    backgroundColor: '#34C759',
-    marginTop: 12,
-  },
+
+
   testButtonText: {
     color: '#fff',
     fontSize: 16,

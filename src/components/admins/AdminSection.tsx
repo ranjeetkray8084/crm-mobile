@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAdmins } from '../../core/hooks/useAdmins';
 import { useAuth } from '../../shared/contexts/AuthContext';
 import { customAlert } from '../../core/utils/alertUtils';
+import ThreeDotMenu from '../common/ThreeDotMenu';
+import UpdateUserModal from '../modals/UpdateUserModal';
 
 interface Admin {
   userId: string;
@@ -124,36 +126,36 @@ const AdminSection: React.FC = () => {
 
   const renderAdminCard = (admin: Admin) => {
     const isActive = admin.status === 'active' || admin.status === true || admin.status === 1;
-    const companyName = admin.company?.name || admin.companyName || 'No Company';
 
     return (
       <View key={admin.userId} style={styles.adminCard}>
         <View style={styles.adminCardHeader}>
           <Text style={styles.adminName}>{admin.name}</Text>
-          <View style={styles.actionButtons}>
-            {isActive ? (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.dangerButton]}
-                onPress={() => handleRevokeAdmin(admin.userId)}
-              >
-                <Ionicons name="shield-checkmark-outline" size={16} color="#EF4444" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.successButton]}
-                onPress={() => handleActivateAdmin(admin.userId)}
-              >
-                <Ionicons name="shield-outline" size={16} color="#10B981" />
-              </TouchableOpacity>
-            )}
-          </View>
+          <ThreeDotMenu
+            item={admin}
+            actions={[
+              {
+                label: 'Update Admin',
+                icon: <Ionicons name="create-outline" size={14} color="#3B82F6" />,
+                onClick: () => setSelectedAdmin(admin)
+              },
+              isActive
+                ? {
+                  label: 'Deactivate',
+                  icon: <Ionicons name="shield-checkmark-outline" size={14} color="#EF4444" />,
+                  onClick: () => handleRevokeAdmin(admin.userId),
+                  danger: true
+                }
+                : {
+                  label: 'Activate',
+                  icon: <Ionicons name="shield-outline" size={14} color="#10B981" />,
+                  onClick: () => handleActivateAdmin(admin.userId)
+                }
+            ]}
+          />
         </View>
         
         <View style={styles.adminDetails}>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>ID:</Text>
-            <Text style={styles.detailValue}>{admin.userId}</Text>
-          </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Email:</Text>
             <Text style={styles.detailValue}>{admin.email}</Text>
@@ -163,8 +165,10 @@ const AdminSection: React.FC = () => {
             <Text style={styles.detailValue}>{admin.phone}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Company:</Text>
-            <Text style={styles.detailValue}>{companyName}</Text>
+            <Text style={styles.detailLabel}>Role:</Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleText}>ADMIN</Text>
+            </View>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Status:</Text>
@@ -179,10 +183,6 @@ const AdminSection: React.FC = () => {
                 {isActive ? 'Active' : 'Inactive'}
               </Text>
             </View>
-          </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Actions:</Text>
-            <Text style={styles.detailValue}>View Only</Text>
           </View>
         </View>
       </View>
@@ -224,6 +224,16 @@ const AdminSection: React.FC = () => {
           {filteredAdmins.map(renderAdminCard)}
         </View>
       )}
+
+      {/* Update User Modal */}
+      {selectedAdmin && (
+        <UpdateUserModal
+          user={selectedAdmin}
+          isVisible={!!selectedAdmin}
+          onClose={() => setSelectedAdmin(null)}
+          onUpdated={loadAdminsData}
+        />
+      )}
     </ScrollView>
   );
 };
@@ -235,7 +245,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
+    padding: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -243,22 +253,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#1F2937',
     marginLeft: 12,
   },
   searchInput: {
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
     backgroundColor: '#FFFFFF',
     color: '#1F2937',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   skeletonContainer: {
     padding: 20,
@@ -310,50 +325,36 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   adminsContainer: {
-    padding: 20,
+    padding: 24,
   },
   adminCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 24,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   adminCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   adminName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#3B82F6',
     flex: 1,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: '#F3F4F6',
-  },
-  dangerButton: {
-    backgroundColor: '#FEF2F2',
-  },
-  successButton: {
-    backgroundColor: '#F0FDF4',
-  },
+
   adminDetails: {
-    gap: 8,
+    gap: 12,
   },
   detailRow: {
     flexDirection: 'row',
@@ -361,7 +362,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#6B7280',
     width: 60,
   },
@@ -369,11 +370,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     flex: 1,
+    fontWeight: '500',
+  },
+  roleBadge: {
+    backgroundColor: '#DBEAFE',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  roleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E40AF',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   activeStatus: {
     backgroundColor: '#D1FAE5',
@@ -383,7 +396,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   activeStatusText: {
     color: '#065F46',

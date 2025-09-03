@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../shared/contexts/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useResponsive from '../../core/hooks/useResponsive';
 import Logo from './Logo';
+import { UserService } from '../../core/services';
 
 interface SidebarProps {
   isVisible: boolean;
@@ -30,6 +32,34 @@ export default function Sidebar({
   const router = useRouter();
   const responsive = useResponsive();
   const styles = getStyles(responsive);
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
+
+  // Fetch avatar when user is available
+  useEffect(() => {
+    if (user?.userId) {
+      fetchAvatar(user.userId);
+    }
+  }, [user]);
+
+  const fetchAvatar = async (userId: number) => {
+    try {
+      console.log('🔧 Sidebar: Fetching avatar for user:', userId);
+      
+      const result = await UserService.getAvatar(userId) as any;
+      console.log('🔧 Sidebar: Avatar API result:', result);
+      
+      if (result.success && result.data) {
+        console.log('🔧 Sidebar: Found avatar from API:', result.data);
+        setAvatarUrl(result.data);
+      } else {
+        console.log('🔧 Sidebar: No avatar found from API, using default');
+        setAvatarUrl('');
+      }
+    } catch (error) {
+      console.error('🔧 Sidebar: Error fetching avatar:', error);
+      setAvatarUrl('');
+    }
+  };
 
   const getMenuItems = () => {
     const commonItems = [
@@ -151,9 +181,29 @@ export default function Sidebar({
             {/* Footer - User Info */}
             <View style={styles.footer}>
               <View style={styles.userInfo}>
-                <View style={styles.userAvatar}>
-                  <Ionicons name="person" size={20} color="#fff" />
-                </View>
+                {avatarUrl ? (
+                  <Image
+                    source={{ 
+                      uri: avatarUrl,
+                      headers: {
+                        'Authorization': `Bearer ${user?.token || ''}`
+                      }
+                    }}
+                    style={styles.userAvatar}
+                    contentFit="cover"
+                    onError={(error) => {
+                      console.log('🔧 Sidebar: Image loading error:', error);
+                      setAvatarUrl('');
+                    }}
+                    onLoad={() => {
+                      console.log('🔧 Sidebar: Image loaded successfully:', avatarUrl);
+                    }}
+                  />
+                ) : (
+                  <View style={styles.userAvatar}>
+                    <Ionicons name="person" size={20} color="#fff" />
+                  </View>
+                )}
                 <View style={styles.userDetails}>
                   <Text style={styles.userName}>{user?.name || 'User'}</Text>
                   <Text style={styles.userRole}>{user?.role || 'Role'}</Text>

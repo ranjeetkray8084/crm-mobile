@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import ThreeDotMenu from './ThreeDotMenu';
 
 interface User {
   id?: string;
@@ -162,6 +163,37 @@ const UserCard: React.FC<UserCardProps> = ({
               {getStatusLabel(user.status)}
             </Text>
           </View>
+          <ThreeDotMenu
+            item={user}
+            actions={[
+              ...(onUpdate ? [{
+                label: 'Edit User',
+                icon: <Ionicons name="create" size={14} color="#3B82F6" />,
+                onClick: () => onUpdate(user)
+              }] : []),
+              ...(onStatusChange ? [{
+                label: isActive ? 'Deactivate' : 'Activate',
+                icon: <Ionicons name="refresh" size={14} color="#10B981" />,
+                onClick: () => handleStatusChange()
+              }] : []),
+              ...(onAssign && !user.company ? [{
+                label: 'Assign',
+                icon: <Ionicons name="person-add" size={14} color="#10B981" />,
+                onClick: () => handleAssign()
+              }] : []),
+              ...(onUnassign && user.company ? [{
+                label: 'Unassign',
+                icon: <Ionicons name="person-remove" size={14} color="#F59E0B" />,
+                onClick: () => handleUnassign()
+              }] : []),
+              ...(onDelete ? [{
+                label: 'Delete User',
+                icon: <Ionicons name="trash" size={14} color="#EF4444" />,
+                onClick: () => handleDelete(),
+                danger: true
+              }] : [])
+            ]}
+          />
         </View>
       </View>
 
@@ -198,43 +230,7 @@ const UserCard: React.FC<UserCardProps> = ({
         </View>
       </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actionButtons}>
-        {onUpdate && (
-          <TouchableOpacity style={styles.actionButton} onPress={() => onUpdate(user)}>
-            <Ionicons name="create" size={16} color="#3b82f6" />
-            <Text style={styles.actionButtonText}>Edit</Text>
-          </TouchableOpacity>
-        )}
-        
-        {onStatusChange && (
-          <TouchableOpacity style={styles.actionButton} onPress={handleStatusChange}>
-            <Ionicons name="refresh" size={16} color="#10b981" />
-            <Text style={styles.actionButtonText}>Status</Text>
-          </TouchableOpacity>
-        )}
-        
-        {onAssign && !user.company && (
-          <TouchableOpacity style={styles.actionButton} onPress={handleAssign}>
-            <Ionicons name="person-add" size={16} color="#10b981" />
-            <Text style={styles.actionButtonText}>Assign</Text>
-          </TouchableOpacity>
-        )}
-        
-        {onUnassign && user.company && (
-          <TouchableOpacity style={styles.actionButton} onPress={handleUnassign}>
-            <Ionicons name="person-remove" size={16} color="#f59e0b" />
-            <Text style={styles.actionButtonText}>Unassign</Text>
-          </TouchableOpacity>
-        )}
-        
-        {onDelete && (
-          <TouchableOpacity style={styles.actionButton} onPress={handleDelete}>
-            <Ionicons name="trash" size={16} color="#ef4444" />
-            <Text style={styles.actionButtonText}>Delete</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+
     </View>
   );
 };
@@ -327,28 +323,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontStyle: 'italic',
   },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-    gap: 6,
-  },
-  actionButtonText: {
-    fontSize: 12,
-    color: '#374151',
-    fontWeight: '500',
-  },
+
 });
 
 export default UserCard;

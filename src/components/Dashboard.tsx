@@ -12,9 +12,8 @@ import DashboardStats from './dashboard/DashboardStats';
 import NotificationsSection from './notifications/NotificationsSection';
 import UserSection from './users/UserSection';
 import AdminSection from './admins/AdminSection';
+import AccountSection from './users/AccountSection';
 import Logo from "./common/Logo";
-import NotificationTest from './NotificationTest';
-import SimpleNotificationTest from './common/SimpleNotificationTest';
 
 
 
@@ -117,15 +116,6 @@ export default function Dashboard({
             <NotificationsSection onSectionChange={handleSectionChange} />
           </View>
         );
-      case 'notificationTest':
-        console.log('🔔 DEBUG: Dashboard: Rendering notificationTest section');
-        return (
-          <View style={styles.dashboardSections}>
-            <SimpleNotificationTest />
-          </View>
-        );
-
-
       case 'users':
       case 'viewUsers':
         return <UserSection />;
@@ -165,46 +155,13 @@ export default function Dashboard({
           </View>
         );
       case 'account':
-        return (
-          <View style={styles.dashboardSections}>
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Account Settings</Text>
-              <Text style={styles.sectionDescription}>
-                This section will contain account management options and settings.
-              </Text>
-            </View>
-          </View>
-        );
+        return <AccountSection />;
       default:
         // Show Default Dashboard Content
         return (
           <>
             {/* Dashboard Stats Cards */}
             <DashboardStats />
-            
-            {/* Notification Test Buttons */}
-            <View style={styles.dashboardSections}>
-              <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>🔔 Push Notifications Test</Text>
-                <Text style={styles.sectionDescription}>
-                  Test push notifications functionality including permissions, token generation, and local notifications.
-                </Text>
-                <TouchableOpacity
-                  style={styles.testButton}
-                  onPress={() => handleSectionChange('notificationTest')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.testButtonText}>Simple Test</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.testButton, styles.pushTestButton]}
-                  onPress={() => router.push('/push-test')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.testButtonText}>Advanced Test</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </>
         );
     }
@@ -475,26 +432,7 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 
-  // Test Button Styles
-  testButton: {
-    backgroundColor: '#1c69ff',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  pushTestButton: {
-    backgroundColor: '#10b981',
-    marginTop: 12,
-  },
 
-
-  testButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
 
 
 });

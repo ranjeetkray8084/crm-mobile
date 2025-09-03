@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../shared/contexts/AuthContext';
 import { UserService } from '../../core/services';
 import { customAlert } from '../../core/utils/alertUtils';
@@ -24,6 +24,12 @@ interface FormData {
 }
 
 interface ApiResponse {
+  success: boolean;
+  data: any;
+  error?: string;
+}
+
+interface UserApiResponse {
   success: boolean;
   data: any;
   error?: string;
@@ -48,7 +54,7 @@ const AccountSection: React.FC = () => {
     }
 
     try {
-      const result = await UserService.getUserById(user.userId) as ApiResponse;
+      const result = await UserService.getUserById(user.userId) as UserApiResponse;
       if (result.success) {
         const userData = result.data;
         setFormData({
@@ -70,25 +76,41 @@ const AccountSection: React.FC = () => {
 
   const fetchAvatar = async (userId: string) => {
     try {
-      const result = await UserService.getAvatar(userId) as ApiResponse;
+      console.log('🔧 Fetching avatar for user:', userId);
+      
+      const result = await UserService.getAvatar(Number(userId)) as ApiResponse;
+      console.log('🔧 Avatar API result:', result);
+      
       if (result.success && result.data) {
+        console.log('🔧 Found avatar from API:', result.data);
         setAvatarUrl(result.data);
       } else {
+        console.log('🔧 No avatar found from API, using default');
         setAvatarUrl('');
       }
     } catch (error) {
+      console.error('🔧 Error fetching avatar:', error);
       setAvatarUrl('');
     }
   };
 
   useEffect(() => {
     if (user) {
+      console.log('🔧 User data received:', user);
       setFormData({
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
         role: user.role || '',
       });
+      
+      // Load profile picture immediately when user is available
+      if (user.userId) {
+        console.log('🔧 Loading avatar for userId:', user.userId);
+        fetchAvatar(user.userId);
+      } else {
+        console.log('🔧 No userId found in user object');
+      }
     }
     loadAccountInfo();
   }, [user]);
@@ -202,20 +224,29 @@ const AccountSection: React.FC = () => {
         setAvatarUrl(asset.uri);
 
         try {
-          // Convert asset to file-like object for upload
-          const response = await fetch(asset.uri);
-          const blob = await response.blob();
-          
-          // Create a file object from the blob
-          const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+          // Show preview immediately
+          setAvatarUrl(asset.uri);
 
-          const uploadResult = await UserService.uploadAvatar(user.userId, file) as ApiResponse;
-
-          if (uploadResult.success) {
-            customAlert('✅ Avatar uploaded successfully!');
-            await fetchAvatar(user.userId);
-          } else {
-            customAlert('❌ Error uploading avatar: ' + uploadResult.error);
+          try {
+            // For React Native, we'll use the asset URI directly
+            // The backend should handle the file upload from the URI
+            const uploadResult = await UserService.uploadAvatar(user.userId, asset.uri, 'avatar.jpg') as ApiResponse;
+            
+            if (uploadResult.success) {
+              customAlert('✅ Avatar uploaded successfully!');
+              await fetchAvatar(user.userId);
+              
+              // Update user data in AsyncStorage
+              const userResult = await UserService.getUserById(user.userId) as UserApiResponse;
+              if (userResult.success) {
+                await AsyncStorage.setItem('user', JSON.stringify(userResult.data));
+              }
+            } else {
+              customAlert('❌ Error uploading avatar: ' + uploadResult.error);
+              setAvatarUrl('');
+            }
+          } catch (error: any) {
+            customAlert('❌ Error uploading avatar: ' + error.message);
             setAvatarUrl('');
           }
         } catch (error: any) {
@@ -229,7 +260,7 @@ const AccountSection: React.FC = () => {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
       <View style={styles.card}>
         {/* Header */}
         <View style={styles.header}>
@@ -243,11 +274,30 @@ const AccountSection: React.FC = () => {
           {/* Profile Picture */}
           <View style={styles.profileSection}>
             <View style={styles.avatarContainer}>
-                             <Image
-                 source={avatarUrl ? { uri: avatarUrl } : require('../../../assets/images/icon.png')}
-                 style={styles.avatar}
-                 contentFit="cover"
-               />
+              {avatarUrl ? (
+                <Image
+                  source={{ 
+                    uri: avatarUrl,
+                    headers: {
+                      'Authorization': `Bearer ${user?.token || ''}`
+                    }
+                  }}
+                  style={styles.avatar}
+                  contentFit="cover"
+                  onError={(error) => {
+                    console.log('🔧 Image loading error:', error);
+                    // Try without auth headers if it fails
+                    setAvatarUrl(avatarUrl.split('?')[0]); // Remove any query parameters
+                  }}
+                  onLoad={() => {
+                    console.log('🔧 Image loaded successfully:', avatarUrl);
+                  }}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="person" size={48} color="#9CA3AF" />
+                </View>
+              )}
               <TouchableOpacity
                 style={styles.cameraButton}
                 onPress={handleAvatarUpload}
@@ -262,65 +312,61 @@ const AccountSection: React.FC = () => {
 
           {/* Form */}
           <View style={styles.form}>
-            <View style={styles.inputRow}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Full Name</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    !isEditing && styles.inputReadOnly,
-                  ]}
-                  value={formData.name}
-                  onChangeText={(value) => handleInputChange('name', value)}
-                  editable={isEditing}
-                  placeholder="Enter your full name"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email Address</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    !isEditing && styles.inputReadOnly,
-                  ]}
-                  value={formData.email}
-                  onChangeText={(value) => handleInputChange('email', value)}
-                  editable={isEditing}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  !isEditing && styles.inputReadOnly,
+                ]}
+                value={formData.name}
+                onChangeText={(value) => handleInputChange('name', value)}
+                editable={isEditing}
+                placeholder="Enter your full name"
+              />
             </View>
 
-            <View style={styles.inputRow}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  !isEditing && styles.inputReadOnly,
+                ]}
+                value={formData.email}
+                onChangeText={(value) => handleInputChange('email', value)}
+                editable={isEditing}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  !isEditing && styles.inputReadOnly,
+                ]}
+                value={formData.phone}
+                onChangeText={(value) => handleInputChange('phone', value)}
+                editable={isEditing}
+                placeholder="Enter your phone number"
+                keyboardType="phone-pad"
+              />
+            </View>
+
+            {!isEditing && (
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Phone Number</Text>
+                <Text style={styles.label}>Role</Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    !isEditing && styles.inputReadOnly,
-                  ]}
-                  value={formData.phone}
-                  onChangeText={(value) => handleInputChange('phone', value)}
-                  editable={isEditing}
-                  placeholder="Enter your phone number"
-                  keyboardType="phone-pad"
+                  style={[styles.input, styles.inputReadOnly]}
+                  value={formData.role}
+                  editable={false}
                 />
               </View>
-
-              {!isEditing && (
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Role</Text>
-                  <TextInput
-                    style={[styles.input, styles.inputReadOnly]}
-                    value={formData.role}
-                    editable={false}
-                  />
-                </View>
-              )}
-            </View>
+            )}
 
             {/* Buttons */}
             <View style={styles.buttonSection}>
@@ -367,19 +413,20 @@ const AccountSection: React.FC = () => {
           </View>
         )}
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'transparent',
+    padding: 20,
   },
   card: {
     backgroundColor: 'white',
     borderRadius: 16,
-    margin: 16,
+    margin: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -422,6 +469,16 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: '#E5E7EB',
   },
+  avatarPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 4,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   cameraButton: {
     position: 'absolute',
     bottom: 0,
@@ -447,10 +504,6 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 24,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    gap: 16,
   },
   inputContainer: {
     flex: 1,

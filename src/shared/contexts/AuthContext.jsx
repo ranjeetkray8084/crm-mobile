@@ -6,14 +6,14 @@ const AuthContext = createContext();
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    console.warn('useAuth must be used within an AuthProvider - this is expected during initial render');
-    // Return a fallback context instead of throwing an error
+    // Return a proper fallback context instead of just logging a warning
+    console.log('🔧 useAuth: Context not available, using fallback (this is normal during initial render)');
     return {
       user: null,
       loading: true,
       isAuthenticated: false,
       isReady: false,
-      error: 'Auth context not available',
+      error: null,
       login: async () => ({ success: false, error: 'Auth context not available' }),
       logout: async () => {},
       updateUser: async () => {},
@@ -35,34 +35,34 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        console.log('AuthProvider: Initializing...');
+        console.log('🔧 AuthProvider: Initializing...');
         setError(null);
         
         // Check for stored credentials
         const currentUser = await AuthService.getCurrentUser();
         const token = await AuthService.getToken();
 
-        console.log('AuthProvider: Stored user:', !!currentUser, 'Stored token:', !!token);
+        console.log('🔧 AuthProvider: Stored user:', !!currentUser, 'Stored token:', !!token);
 
         if (currentUser && token) {
           // Set axios header for future requests
           try {
             AuthService.setAxiosHeader(token);
           } catch (headerError) {
-            console.warn('Could not set axios header:', headerError);
+            console.warn('🔧 Could not set axios header:', headerError);
           }
           
           // Since backend doesn't have session check, we'll just use stored credentials
           setUser(currentUser);
           setIsAuthenticated(true);
-          console.log('AuthProvider: User authenticated from stored credentials');
+          console.log('🔧 AuthProvider: User authenticated from stored credentials');
         } else {
           setUser(null);
           setIsAuthenticated(false);
-          console.log('AuthProvider: No stored credentials found');
+          console.log('🔧 AuthProvider: No stored credentials found');
         }
       } catch (error) {
-        console.error('AuthProvider: Failed to initialize auth:', error);
+        console.error('🔧 AuthProvider: Failed to initialize auth:', error);
         setError(error.message || 'Authentication initialization failed');
         setUser(null);
         setIsAuthenticated(false);
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
         // Mark the context as ready after initialization
         setTimeout(() => {
           setIsReady(true);
-          console.log('AuthProvider: Context ready');
+          console.log('🔧 AuthProvider: Context ready');
         }, 100);
       }
     };
@@ -80,25 +80,25 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
-    console.log('AuthProvider: login function called with:', { email: credentials.email, password: '***' });
+    console.log('🔧 AuthProvider: login function called with:', { email: credentials.email, password: '***' });
     setLoading(true);
     setError(null);
     
     try {
-      console.log('AuthProvider: About to call AuthService.login...');
+      console.log('🔧 AuthProvider: About to call AuthService.login...');
       
       if (!AuthService || !AuthService.login) {
         const errorMsg = 'Authentication service not available';
-        console.error('AuthProvider:', errorMsg);
+        console.error('🔧 AuthProvider:', errorMsg);
         setError(errorMsg);
         return { success: false, error: errorMsg };
       }
       
       const result = await AuthService.login(credentials);
-      console.log('AuthProvider: AuthService.login result:', result);
+      console.log('🔧 AuthProvider: AuthService.login result:', result);
 
       if (result && result.success) {
-        console.log('AuthProvider: Login successful, saving session...');
+        console.log('🔧 AuthProvider: Login successful, saving session...');
         
         // Extract user and token from the result
         const userData = result.user || result.data;
@@ -111,23 +111,23 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setError(null);
             
-            console.log('AuthProvider: User authenticated successfully:', userData);
+            console.log('🔧 AuthProvider: User authenticated successfully:', userData);
             
             return { success: true, user: userData, message: result.message || 'Login successful' };
           } catch (sessionError) {
-            console.error('AuthProvider: Failed to save session:', sessionError);
+            console.error('🔧 AuthProvider: Failed to save session:', sessionError);
             setError('Failed to save session');
             return { success: false, error: 'Failed to save session' };
           }
         } else {
           const errorMsg = 'Invalid response from server';
-          console.error('AuthProvider:', errorMsg);
+          console.error('🔧 AuthProvider:', errorMsg);
           setError(errorMsg);
           return { success: false, error: errorMsg };
         }
       } else {
         const errorMsg = result?.error || 'Login failed';
-        console.log('AuthProvider: Login failed:', errorMsg);
+        console.log('🔧 AuthProvider: Login failed:', errorMsg);
         setError(errorMsg);
         return { 
           success: false, 
@@ -137,7 +137,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       const errorMsg = error.message || 'Login failed';
-      console.error('AuthProvider: Login error caught:', error);
+      console.error('🔧 AuthProvider: Login error caught:', error);
       setError(errorMsg);
       return { success: false, error: errorMsg };
     } finally {
@@ -147,16 +147,16 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log('AuthProvider: Logging out...');
+      console.log('🔧 AuthProvider: Logging out...');
       setError(null);
       
       await AuthService.logout();
     } catch (error) {
-      console.warn('Logout error:', error);
+      console.warn('🔧 Logout error:', error);
       setError(error.message || 'Logout failed');
     } finally {
       // Always clear local state regardless of API call result
-      console.log('AuthProvider: Clearing local auth state');
+      console.log('🔧 AuthProvider: Clearing local auth state');
       setUser(null);
       setIsAuthenticated(false);
     }
@@ -170,7 +170,7 @@ export const AuthProvider = ({ children }) => {
       await AuthService.saveSession(newUserData, token);
       setUser(newUserData);
     } catch (error) {
-      console.warn('Failed to update user:', error);
+      console.warn('🔧 Failed to update user:', error);
       setError(error.message || 'Failed to update user');
     }
   };
@@ -180,7 +180,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       return await AuthService.sendOtp(email);
     } catch (error) {
-      console.error('Failed to send OTP:', error);
+      console.error('🔧 Failed to send OTP:', error);
       setError(error.message || 'Failed to send OTP');
       return { success: false, error: error.message || 'Failed to send OTP' };
     }
@@ -191,7 +191,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       return await AuthService.verifyOtp(email, otp);
     } catch (error) {
-      console.error('Failed to verify OTP:', error);
+      console.error('🔧 Failed to verify OTP:', error);
       setError(error.message || 'Failed to verify OTP');
       return { success: false, error: error.message || 'Failed to verify OTP' };
     }
@@ -202,7 +202,7 @@ export const AuthProvider = ({ children }) => {
       setError(null);
       return await AuthService.resetPasswordWithOtp(email, newPassword);
     } catch (error) {
-      console.error('Failed to reset password:', error);
+      console.error('🔧 Failed to reset password:', error);
       setError(error.message || 'Failed to reset password');
       return { success: false, error: error.message || 'Failed to reset password' };
     }
@@ -222,7 +222,7 @@ export const AuthProvider = ({ children }) => {
     resetPasswordWithOtp
   };
 
-  console.log('AuthProvider: Rendering with context value:', {
+  console.log('🔧 AuthProvider: Rendering with context value:', {
     user: !!user,
     loading,
     isAuthenticated,

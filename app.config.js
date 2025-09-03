@@ -37,7 +37,7 @@ export default {
             }
           }
         },
-        UIBackgroundModes: ["remote-notification", "background-fetch"],
+        UIBackgroundModes: ["background-fetch"],
         NSUserNotificationAlertStyle: "alert",
         NSUserNotificationUsageDescription: "This app uses notifications to keep you updated about leads, tasks, and important announcements.",
         CFBundleURLTypes: [
@@ -85,34 +85,10 @@ export default {
       environment: process.env.NODE_ENV || 'development',
       debug: process.env.NODE_ENV === 'development',
       eas: {
-        projectId: "7b166f07-1eab-40be-8faf-4252befa0675"
+        projectId: "e54487e4-0b6f-4429-8b02-f1c84f6b0bba"
       }
     },
     plugins: [
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/icon.png",
-          "color": "#ffffff",
-          "mode": "production",
-          "androidMode": "default",
-          "androidCollapsedTitle": "New Notification",
-          "androidChannelId": "default",
-          "androidChannelName": "Default",
-          "androidChannelDescription": "Default notification channel for leads, tasks, and announcements",
-          "androidChannelImportance": "max",
-          "androidShowBadge": true,
-          "androidVibrate": true,
-          "androidSound": true,
-          "androidColor": "#FF231F7C",
-          "androidSticky": false,
-          "androidPriority": "max",
-          "iosDisplayInForeground": true,
-          "iosSound": "default",
-          "iosBadge": true,
-          "iosCritical": false
-        }
-      ],
       "expo-dev-client",
       [
         "@react-native-firebase/app",
@@ -129,27 +105,6 @@ export default {
         }
       ],
       "expo-router"
-    ],
-    // Production notification configuration
-    notification: {
-      icon: "./assets/icon.png",
-      color: "#ffffff",
-      iosDisplayInForeground: true,
-      androidMode: "default",
-      androidCollapsedTitle: "New Notification",
-      androidChannelId: "default",
-      androidChannelName: "Default",
-      androidChannelDescription: "Default notification channel for leads, tasks, and announcements",
-      androidChannelImportance: "max",
-      androidShowBadge: true,
-      androidVibrate: true,
-      androidSound: true,
-      androidColor: "#FF231F7C",
-      androidSticky: false,
-      androidPriority: "max",
-      iosSound: "default",
-      iosBadge: true,
-      iosCritical: false
-    }
+    ]
   }
 };

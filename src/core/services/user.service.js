@@ -1,6 +1,7 @@
 // User Service - Reusable for Web & Mobile
 import axios from '../../legacy/api/axios';
 import { API_ENDPOINTS } from './api.endpoints';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export class UserService {
   /**
@@ -294,15 +295,23 @@ export class UserService {
   /**
    * Upload user avatar
    * @param {number} userId 
-   * @param {File} file 
+   * @param {string} imageUri - For React Native, this is the file URI
    * @param {string} avatarName 
    * @returns {Promise<Object>} API response
    */
-  static async uploadAvatar(userId, file, avatarName) {
+  static async uploadAvatar(userId, imageUri, avatarName) {
     try {
       const formData = new FormData();
-      formData.append('avatar', file);
-      formData.append('avatarName', avatarName);
+      
+      // For React Native, we need to create a file-like object
+      const fileInfo = {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: avatarName || 'avatar.jpg'
+      };
+      
+      formData.append('avatar', fileInfo);
+      formData.append('avatarName', avatarName || 'avatar.jpg');
 
       const response = await axios.post(API_ENDPOINTS.USERS.UPLOAD_AVATAR(userId), formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -327,15 +336,18 @@ export class UserService {
    */
   static async getUserAvatar(userId) {
     try {
-      const response = await axios.get(API_ENDPOINTS.USERS.GET_AVATAR(userId), {
-        responseType: 'blob'
-      });
-      const imageUrl = URL.createObjectURL(response.data);
+      // Simply return the image URL - let the image component handle loading
+      const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://backend.leadstracker.in';
+      const imageUrl = `${baseURL}${API_ENDPOINTS.USERS.GET_AVATAR(userId)}`;
+      
+      console.log('🔧 Returning image URL:', imageUrl);
+      
       return {
         success: true,
         data: imageUrl
       };
     } catch (error) {
+      console.log('🔧 Avatar API error:', error.response?.status, error.message);
       return {
         success: false,
         error: 'Failed to load avatar'

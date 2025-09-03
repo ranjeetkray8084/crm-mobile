@@ -13,6 +13,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useUsers } from '../../core/hooks/useUsers';
 import { useAuth } from '../../shared/contexts/AuthContext';
 import { customAlert } from '../../core/utils/alertUtils';
+import ThreeDotMenu from '../common/ThreeDotMenu';
+import AssignAdminModal from '../modals/AssignAdminModal';
+import UpdateUserModal from '../modals/UpdateUserModal';
 
 interface User {
   userId: string;
@@ -45,6 +48,7 @@ const UserSection: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [assigningUser, setAssigningUser] = useState<User | null>(null);
 
   // Load users based on current user's role
   const loadUserRoleUsers = async () => {
@@ -112,6 +116,10 @@ const UserSection: React.FC = () => {
     }
   };
 
+  const handleAssignAdminSuccess = () => {
+    loadUserRoleUsers();
+  };
+
   // Filter users based on search query
   const filteredUsers = users.filter((user) => {
     const search = searchQuery.toLowerCase();
@@ -144,48 +152,42 @@ const UserSection: React.FC = () => {
       <View key={user.userId} style={styles.userCard}>
         <View style={styles.userCardHeader}>
           <Text style={styles.userName}>{user.name}</Text>
-          <View style={styles.actionButtons}>
-            {(role === 'DIRECTOR' || role === 'ADMIN' || role === 'DEVELOPER') && (
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => setSelectedUser(user)}
-              >
-                <Ionicons name="create-outline" size={16} color="#3B82F6" />
-              </TouchableOpacity>
-            )}
-            {isActive ? (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.dangerButton]}
-                onPress={() => handleDeactivateUser(user.userId)}
-              >
-                <Ionicons name="person-remove-outline" size={16} color="#EF4444" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.successButton]}
-                onPress={() => handleActivateUser(user.userId)}
-              >
-                <Ionicons name="person-check-outline" size={16} color="#10B981" />
-              </TouchableOpacity>
-            )}
-            {isDirector && (
-              hasAdmin ? (
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.dangerButton]}
-                  onPress={() => handleUnassignAdmin(user.userId)}
-                >
-                  <Ionicons name="person-remove-outline" size={16} color="#EF4444" />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.successButton]}
-                  onPress={() => {/* TODO: Implement assign admin */}}
-                >
-                  <Ionicons name="person-add-outline" size={16} color="#10B981" />
-                </TouchableOpacity>
-              )
-            )}
-          </View>
+          <ThreeDotMenu
+            item={user}
+            actions={[
+              ...(role === 'DIRECTOR' || role === 'ADMIN' || role === 'DEVELOPER' ? [{
+                label: 'Update User',
+                icon: <Ionicons name="create-outline" size={14} color="#3B82F6" />,
+                onClick: () => setSelectedUser(user)
+              }] : []),
+              isActive
+                ? {
+                  label: 'Deactivate',
+                  icon: <Ionicons name="person-remove-outline" size={14} color="#EF4444" />,
+                  onClick: () => handleDeactivateUser(user.userId),
+                  danger: true
+                }
+                : {
+                  label: 'Activate',
+                  icon: <Ionicons name="person-check-outline" size={14} color="#10B981" />,
+                  onClick: () => handleActivateUser(user.userId)
+                },
+              ...(isDirector ? [
+                hasAdmin
+                  ? {
+                    label: 'Unassign Admin',
+                    icon: <Ionicons name="person-remove-outline" size={14} color="#EF4444" />,
+                    onClick: () => handleUnassignAdmin(user.userId),
+                    danger: true
+                  }
+                  : {
+                    label: 'Assign Admin',
+                    icon: <Ionicons name="person-add-outline" size={14} color="#10B981" />,
+                    onClick: () => setAssigningUser(user)
+                  }
+              ] : [])
+            ]}
+          />
         </View>
         
         <View style={styles.userDetails}>
@@ -260,6 +262,26 @@ const UserSection: React.FC = () => {
         <View style={styles.usersContainer}>
           {filteredUsers.map(renderUserCard)}
         </View>
+      )}
+
+      {/* Assign Admin Modal */}
+      {assigningUser && (
+        <AssignAdminModal
+          user={assigningUser}
+          isVisible={!!assigningUser}
+          onClose={() => setAssigningUser(null)}
+          onAssigned={handleAssignAdminSuccess}
+        />
+      )}
+
+      {/* Update User Modal */}
+      {selectedUser && (
+        <UpdateUserModal
+          user={selectedUser}
+          isVisible={!!selectedUser}
+          onClose={() => setSelectedUser(null)}
+          onUpdated={handleAssignAdminSuccess}
+        />
       )}
     </ScrollView>
   );
@@ -374,21 +396,7 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     flex: 1,
   },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: '#F3F4F6',
-  },
-  dangerButton: {
-    backgroundColor: '#FEF2F2',
-  },
-  successButton: {
-    backgroundColor: '#F0FDF4',
-  },
+
   userDetails: {
     gap: 8,
   },

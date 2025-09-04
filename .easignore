@@ -1,0 +1,117 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Development files
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Native build files
+android/app/build/
+android/build/
+android/.gradle/
+ios/build/
+ios/Pods/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Test files
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Coverage
+coverage/
+
+# Environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Metro
+.metro-health-check*
+
+# Flipper
+ios/Pods/Flipper*
+
+# CocoaPods
+ios/Pods/
+
+# Fastlane
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/fastlane/screenshots
+ios/fastlane/test_output
+
+# Bundle artifacts
+*.jsbundle
+
+# Ruby
+.bundle/
+vendor/
+
+# Xcode
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+*.xcworkspace/xcuserdata/
+
+# Android
+android/app/debug/
+android/app/release/
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/app/google-services.json
+android/app/build/
+android/build/
+android/.cxx/
+android/app/.cxx/
+
+# Gradle
+.gradle/
+build/
+
+# IntelliJ
+*.iml
+.idea/
+
+# Keystore files
+*.keystore
+*.jks
+
+# Signing files
+android/app/debug.keystore

@@ -1,22 +1,22 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
+  ActivityIndicator,
   Alert,
+  Dimensions,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
-  Dimensions,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../src/shared/contexts/AuthContext';
 import Logo from '../src/components/common/Logo';
+import { useAuth } from '../src/shared/contexts/AuthContext';
 
 
 export default function LoginScreen() {
@@ -96,9 +96,11 @@ export default function LoginScreen() {
         const message = result.message || 'Login successful!';
         setBackendMessage(message);
         
-        // Navigate to main app after successful login
-        console.log('Login successful, navigating to main app...');
-        router.replace('/(tabs)');
+        // Navigate directly to dashboard after successful login
+        console.log('Login successful, navigating to dashboard...');
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 1000);
       } else {
         const errorMsg = result?.error || 'Login failed. Please check your credentials.';
         setBackendMessage(errorMsg);
@@ -220,6 +222,7 @@ export default function LoginScreen() {
       setIsLoadingOtp(false);
     }
   };
+
 
   const renderLoginForm = () => (
     <View style={styles.formContainer}>

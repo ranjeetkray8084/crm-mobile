@@ -153,24 +153,26 @@ axiosInstance.interceptors.response.use(
     }
     
     // Enhanced error handling with security
-    if (error.response?.status === 401) {
-      const isAuthEndpoint = error.config?.url?.includes('/api/auth/');
-      const isFollowUpEndpoint = error.config?.url?.includes('/followups');
-      
-      if (!isAuthEndpoint && !isFollowUpEndpoint) {
-        // Clear invalid token and redirect to login
-        try {
-          await AsyncStorage.removeItem('crm_token');
-          await AsyncStorage.removeItem('crm_user');
-        } catch (storageError) {
-          console.warn('Failed to clear storage:', storageError);
-        }
+          if (error.response?.status === 401) {
+        const isAuthEndpoint = error.config?.url?.includes('/api/auth/');
+        const isFollowUpEndpoint = error.config?.url?.includes('/followups');
+        const isPushNotificationEndpoint = error.config?.url?.includes('/push-notifications');
         
-        // In React Native, you might want to trigger navigation to login
-        // This could be done through a navigation service or context
-        console.log('Authentication failed, please login again');
+        if (!isAuthEndpoint && !isFollowUpEndpoint && !isPushNotificationEndpoint) {
+          // Clear invalid token and redirect to login
+          try {
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('crm_token');
+            await AsyncStorage.removeItem('crm_user');
+          } catch (storageError) {
+            console.warn('Failed to clear storage:', storageError);
+          }
+          
+          // In React Native, you might want to trigger navigation to login
+          // This could be done through a navigation service or context
+          console.log('Authentication failed, please login again');
+        }
       }
-    }
     
     return Promise.reject(error);
   }

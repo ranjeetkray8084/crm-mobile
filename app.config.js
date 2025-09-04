@@ -29,11 +29,11 @@ export default {
               NSExceptionRequiresForwardSecrecy: true,
               NSIncludesSubdomains: true
             },
-            "192.168.1.26": {
-              NSExceptionAllowsInsecureHTTPLoads: true,
-              NSExceptionMinimumTLSVersion: "1.0",
-              NSExceptionRequiresForwardSecrecy: false,
-              NSIncludesSubdomains: false
+            "backend.leadstracker.in": {
+              NSExceptionAllowsInsecureHTTPLoads: false,
+              NSExceptionMinimumTLSVersion: "1.2",
+              NSExceptionRequiresForwardSecrecy: true,
+              NSIncludesSubdomains: true
             }
           }
         },
@@ -56,6 +56,7 @@ export default {
       },
       package: "com.ranjeet1620.crmnativeexpo",
       versionCode: 2,
+      googleServicesFile: "./android/app/google-services.json",
       permissions: [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
@@ -71,7 +72,7 @@ export default {
       useNextNotificationsApi: true,
       allowBackup: true,
       allowClearUserData: true,
-      googleServicesFile: "./android/app/google-services.json",
+
       compileSdkVersion: 34,
       targetSdkVersion: 34,
       minSdkVersion: 24,
@@ -86,22 +87,52 @@ export default {
       debug: process.env.NODE_ENV === 'development',
       eas: {
         projectId: "e54487e4-0b6f-4429-8b02-f1c84f6b0bba"
-      }
+      },
+
     },
     plugins: [
       "expo-dev-client",
       [
         "@react-native-firebase/app",
         {
-          "android_package_name": "com.ranjeet1620.crmnativeexpo",
-          "google_services_file": "./android/app/google-services.json"
+          android: {
+            googleServicesFile: "./android/app/google-services.json"
+          },
+          ios: {
+            googleServicesFile: "./ios/GoogleService-Info.plist"
+          }
         }
       ],
       [
         "@react-native-firebase/messaging",
         {
-          "android_package_name": "com.ranjeet1620.crmnativeexpo",
-          "google_services_file": "./android/app/google-services.json"
+          android: {
+            requestIgnoreBatteryOptimizations: true
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff",
+          "mode": "production",
+          "androidMode": "default",
+          "androidCollapsedTitle": "New Notification",
+          "androidChannelId": "default",
+          "androidChannelName": "Default",
+          "androidChannelDescription": "Default notification channel for leads, tasks, and announcements",
+          "androidChannelImportance": "max",
+          "androidShowBadge": true,
+          "androidVibrate": true,
+          "androidSound": true,
+          "androidColor": "#FF231F7C",
+          "androidSticky": false,
+          "androidPriority": "max",
+          "iosDisplayInForeground": true,
+          "iosSound": "default",
+          "iosBadge": true,
+          "iosCritical": false
         }
       ],
       "expo-router"

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Image, ImageProps } from 'expo-image';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Image, ImageProps } from 'expo-image';
+import React, { useEffect, useState } from 'react';
 
 interface AuthenticatedImageProps extends Omit<ImageProps, 'source'> {
   uri: string;
@@ -26,13 +26,15 @@ const AuthenticatedImage: React.FC<AuthenticatedImageProps> = ({
   const loadAuthenticatedImage = async () => {
     try {
       setHasError(false);
+      console.log('🔧 Loading authenticated image for URI:', uri);
 
       // Get the auth token
       const token = await AsyncStorage.getItem('token');
+      console.log('🔧 Token found:', !!token);
       
       if (token) {
         // Use the token in the image source headers
-        console.log('🔧 Using authenticated image source');
+        console.log('🔧 Using authenticated image source with token');
         setImageSource({
           uri: uri,
           headers: {

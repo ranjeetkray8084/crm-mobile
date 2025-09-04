@@ -21,6 +21,7 @@ export const API_CONFIG = {
   // Local Network IPs - Add your common IP addresses here
   LOCAL_IPS: [
     'backend.leadstracker.in',  // Production backend
+    'backend.leadstracker.in',  // Production backend
     '192.168.0.100',  // Alternative home router IP
     '10.0.0.100',     // Alternative network range
     '172.20.10.100'   // Mobile hotspot IP
@@ -156,6 +157,7 @@ export const getAvailableLocalIps = () => {
 // Quick IP update functions
 export const setCommonIp = (ipType) => {
   const commonIps = {
+    'production': 'backend.leadstracker.in',
     'home': 'backend.leadstracker.in',
     'office': '192.168.0.100',
     'mobile': '172.20.10.100'

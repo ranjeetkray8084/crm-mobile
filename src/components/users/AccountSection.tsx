@@ -1,20 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
+  ActivityIndicator,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
-  Alert,
+  View
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../../shared/contexts/AuthContext';
 import { UserService } from '../../core/services';
 import { customAlert } from '../../core/utils/alertUtils';
+import { useAuth } from '../../shared/contexts/AuthContext';
+import AuthenticatedImage from '../common/AuthenticatedImage';
 
 interface FormData {
   name: string;
@@ -85,11 +84,12 @@ const AccountSection: React.FC = () => {
         console.log('🔧 Found avatar from API:', result.data);
         setAvatarUrl(result.data);
       } else {
-        console.log('🔧 No avatar found from API, using default');
+        console.log('🔧 No avatar found from API, using default. Error:', result.error);
         setAvatarUrl('');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('🔧 Error fetching avatar:', error);
+      console.error('🔧 Error details:', error.response?.data || error.message);
       setAvatarUrl('');
     }
   };
@@ -275,19 +275,14 @@ const AccountSection: React.FC = () => {
           <View style={styles.profileSection}>
             <View style={styles.avatarContainer}>
               {avatarUrl ? (
-                <Image
-                  source={{ 
-                    uri: avatarUrl,
-                    headers: {
-                      'Authorization': `Bearer ${user?.token || ''}`
-                    }
-                  }}
+                <AuthenticatedImage
+                  uri={avatarUrl}
                   style={styles.avatar}
                   contentFit="cover"
+                  fallbackSource={require('../../../assets/images/icon.png')}
                   onError={(error) => {
                     console.log('🔧 Image loading error:', error);
-                    // Try without auth headers if it fails
-                    setAvatarUrl(avatarUrl.split('?')[0]); // Remove any query parameters
+                    setAvatarUrl(''); // Clear the URL to show placeholder
                   }}
                   onLoad={() => {
                     console.log('🔧 Image loaded successfully:', avatarUrl);

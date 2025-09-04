@@ -1,7 +1,9 @@
 // Authentication Service - Reusable for Web & Mobile
-import axios from '../../legacy/api/axios';
-import { API_ENDPOINTS } from './api.endpoints';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from '../../legacy/api/axios';
+import '../config/firebase.direct'; // Initialize Firebase
+import { API_ENDPOINTS } from './api.endpoints';
+import FCMService from './fcm.service';
 
 export class AuthService {
   static SESSION_KEYS = {
@@ -82,25 +84,52 @@ export class AuthService {
       // Configure axios with new token
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // 🔔 AUTOMATIC PUSH TOKEN MANAGEMENT: Generate and register push token on login
+      // 🔔 Initialize and register push notifications (FCM)
       try {
-        console.log('🔔 DEBUG: AuthService: Managing push notification token on login...');
-        console.log('🔔 DEBUG: AuthService: Importing NotificationService...');
-        const NotificationService = (await import('./NotificationService')).default;
-        console.log('🔔 DEBUG: AuthService: NotificationService imported successfully:', !!NotificationService);
+        console.log('🔥 AuthService: Initializing FCM notifications...');
+        const fcmService = new FCMService();
         
-        console.log('🔔 DEBUG: AuthService: Getting NotificationService instance...');
-        const notificationService = NotificationService.getInstance();
-        console.log('🔔 DEBUG: AuthService: NotificationService instance obtained:', !!notificationService);
+        // Force regenerate token for fresh login
+        const tokenResult = await fcmService.regenerateFCMToken();
+        if (!tokenResult.success) {
+          console.log('🔥 AuthService: Failed to regenerate FCM token:', tokenResult.error);
+        }
         
-        console.log('🔔 DEBUG: AuthService: Calling notificationService.onUserLogin()...');
-        await notificationService.onUserLogin();
-        console.log('✅ DEBUG: AuthService: Push notification token managed successfully');
-      } catch (notificationError) {
-        console.error('❌ DEBUG: AuthService: Could not manage push notification token:', notificationError);
-        console.error('❌ DEBUG: AuthService: Error details:', notificationError.message);
-        console.error('❌ DEBUG: AuthService: Error stack:', notificationError.stack);
-        // Don't fail login if notification service fails
+        const fcmResult = await fcmService.initialize();
+        
+        if (fcmResult.success) {
+          console.log('🔥 AuthService: FCM service initialized successfully');
+          
+          // Store user ID for FCM service
+          await AsyncStorage.setItem('user_id', user.userId.toString());
+          
+          // Register FCM token with backend
+          const registerResult = await fcmService.registerFCMToken();
+          if (registerResult.success) {
+            console.log('🔥 AuthService: FCM token registered successfully');
+          } else {
+            console.log('🔥 AuthService: Failed to register FCM token:', registerResult.error);
+          }
+        } else {
+          if (fcmResult.isFirebaseError) {
+            console.log('🔥 AuthService: Firebase not configured - FCM disabled');
+            console.log('🔥 AuthService: To enable FCM, ensure google-services.json is properly configured');
+          } else {
+            console.log('🔥 AuthService: FCM initialization failed:', fcmResult.error);
+            // Try to register token anyway if we have one
+            try {
+              const registerResult = await fcmService.registerFCMToken();
+              if (registerResult.success) {
+                console.log('🔥 AuthService: FCM token registered successfully (fallback)');
+              }
+            } catch (error) {
+              console.log('🔥 AuthService: Fallback token registration failed:', error.message);
+            }
+          }
+        }
+      } catch (fcmError) {
+        console.error('🔥 AuthService: FCM error:', fcmError);
+        // Don't fail login if FCM fails
       }
 
       // Return success response with backend message
@@ -252,25 +281,27 @@ export class AuthService {
    */
   static async logout() {
     try {
-      // 🔔 AUTOMATIC PUSH TOKEN CLEANUP: Deactivate push token before logout
+      // 🔥 Clear FCM notifications before logout
       try {
-        console.log('🔔 DEBUG: AuthService: Cleaning up push notification token on logout...');
-        console.log('🔔 DEBUG: AuthService: Importing NotificationService for logout...');
-        const NotificationService = (await import('./NotificationService')).default;
-        console.log('🔔 DEBUG: AuthService: NotificationService imported for logout:', !!NotificationService);
+        console.log('🔥 AuthService: Clearing FCM notifications...');
+        const fcmService = new FCMService();
         
-        console.log('🔔 DEBUG: AuthService: Getting NotificationService instance for logout...');
-        const notificationService = NotificationService.getInstance();
-        console.log('🔔 DEBUG: AuthService: NotificationService instance obtained for logout:', !!notificationService);
+        // First, get the current FCM token so we can properly unregister it
+        const tokenResult = await fcmService.getFCMToken();
+        if (tokenResult.success) {
+          console.log('🔥 AuthService: FCM token loaded for logout');
+        }
         
-        console.log('🔔 DEBUG: AuthService: Calling notificationService.onUserLogout()...');
-        await notificationService.onUserLogout();
-        console.log('✅ DEBUG: AuthService: Push notification token cleaned up successfully');
-      } catch (notificationError) {
-        console.error('❌ DEBUG: AuthService: Could not cleanup push notification token:', notificationError);
-        console.error('❌ DEBUG: AuthService: Logout error details:', notificationError.message);
-        console.error('❌ DEBUG: AuthService: Logout error stack:', notificationError.stack);
-        // Don't fail logout if notification service fails
+        const clearResult = await fcmService.clearAll();
+        
+        if (clearResult.success) {
+          console.log('🔥 AuthService: FCM data cleared successfully');
+        } else {
+          console.log('🔥 AuthService: Failed to clear FCM data:', clearResult.error);
+        }
+      } catch (fcmError) {
+        console.error('🔥 AuthService: FCM cleanup error:', fcmError);
+        // Continue with logout even if FCM cleanup fails
       }
 
       const response = await axios.get(API_ENDPOINTS.AUTH.LOGOUT);

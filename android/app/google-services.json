@@ -1,36 +1,26 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "leadstracker-crm",
-    "storage_bucket": "leadstracker-crm.appspot.com"
+    "project_number": "1050289385914",
+    "project_id": "crmnativeexpo-37b6d",
+    "storage_bucket": "crmnativeexpo-37b6d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef1234567890",
+        "mobilesdk_app_id": "1:1050289385914:android:b1601277fb0dc7f550ed83",
         "android_client_info": {
           "package_name": "com.ranjeet1620.crmnativeexpo"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "123456789012-abcdefghijklmnop.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBYourApiKeyHere1234567890"
+          "current_key": "AIzaSyCAZZLVIJ5jZt-kCFaR6GbOf6mHejhP8js"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "123456789012-abcdefghijklmnop.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

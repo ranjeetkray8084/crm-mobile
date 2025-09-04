@@ -1,14 +1,14 @@
-import React, { useState, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  Dimensions,
-  Pressable,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import React, { useRef, useState } from 'react';
+import {
+    Dimensions,
+    Modal,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 interface Action {
   label: string;
@@ -125,6 +125,8 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 8,
     backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   overlay: {
     flex: 1,

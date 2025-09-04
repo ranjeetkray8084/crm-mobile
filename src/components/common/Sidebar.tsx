@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
-import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../../shared/contexts/AuthContext';
+import React, { useEffect, useState } from 'react';
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useResponsive from '../../core/hooks/useResponsive';
-import Logo from './Logo';
 import { UserService } from '../../core/services';
+import { useAuth } from '../../shared/contexts/AuthContext';
+import AuthenticatedImage from './AuthenticatedImage';
+import Logo from './Logo';
 
 interface SidebarProps {
   isVisible: boolean;
@@ -52,11 +52,12 @@ export default function Sidebar({
         console.log('🔧 Sidebar: Found avatar from API:', result.data);
         setAvatarUrl(result.data);
       } else {
-        console.log('🔧 Sidebar: No avatar found from API, using default');
+        console.log('🔧 Sidebar: No avatar found from API, using default. Error:', result.error);
         setAvatarUrl('');
       }
     } catch (error) {
       console.error('🔧 Sidebar: Error fetching avatar:', error);
+      console.error('🔧 Sidebar: Error details:', error.response?.data || error.message);
       setAvatarUrl('');
     }
   };
@@ -182,15 +183,11 @@ export default function Sidebar({
             <View style={styles.footer}>
               <View style={styles.userInfo}>
                 {avatarUrl ? (
-                  <Image
-                    source={{ 
-                      uri: avatarUrl,
-                      headers: {
-                        'Authorization': `Bearer ${user?.token || ''}`
-                      }
-                    }}
+                  <AuthenticatedImage
+                    uri={avatarUrl}
                     style={styles.userAvatar}
                     contentFit="cover"
+                    fallbackSource={require('../../../assets/images/icon.png')}
                     onError={(error) => {
                       console.log('🔧 Sidebar: Image loading error:', error);
                       setAvatarUrl('');

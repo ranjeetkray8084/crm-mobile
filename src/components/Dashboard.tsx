@@ -1,19 +1,21 @@
 // src/components/Dashboard.tsx
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../shared/contexts/AuthContext';
+import React, { useState } from 'react';
+import { RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import '../core/config/firebase.direct'; // Initialize Firebase
 import { useResponsive } from '../core/hooks/useResponsive';
-import Sidebar from './common/Sidebar';
+import { useAuth } from '../shared/contexts/AuthContext';
+import AdminSection from './admins/AdminSection';
+import Logo from "./common/Logo";
 import NotificationDropdown from './common/NotificationDropdown';
+import Sidebar from './common/Sidebar';
 import DashboardStats from './dashboard/DashboardStats';
 import NotificationsSection from './notifications/NotificationsSection';
-import UserSection from './users/UserSection';
-import AdminSection from './admins/AdminSection';
 import AccountSection from './users/AccountSection';
-import Logo from "./common/Logo";
+import UserSection from './users/UserSection';
+
 
 
 
@@ -51,6 +53,11 @@ export default function Dashboard({
       setIsRefreshing(false);
     }, 1000);
   };
+
+
+
+
+
 
   // Handle case when user is not available
   if (!user) {
@@ -157,13 +164,7 @@ export default function Dashboard({
       case 'account':
         return <AccountSection />;
       default:
-        // Show Default Dashboard Content
-        return (
-          <>
-            {/* Dashboard Stats Cards */}
-            <DashboardStats />
-          </>
-        );
+        return <DashboardStats />;
     }
   };
 
@@ -431,7 +432,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#6b7280',
   },
-
 
 
 

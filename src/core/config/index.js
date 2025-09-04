@@ -69,7 +69,7 @@ export const environments = {
   
   production: {
     api: {
-      baseURL: (import.meta.env.VITE_API_BASE_URL || 'http:/localhost:8082') + '/api'
+      baseURL: (import.meta.env.VITE_API_BASE_URL || 'https://backend.leadstracker.in') + '/api'
     },
     debug: false
   },

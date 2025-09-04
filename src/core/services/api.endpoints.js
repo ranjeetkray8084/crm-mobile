@@ -187,6 +187,37 @@ export const API_ENDPOINTS = {
     DELETE_COLUMN: (taskId) => `/api/task-files/${taskId}/delete-column`,
     DELETE: (taskId) => `/api/task-files/${taskId}`,
     UNDO: (taskId) => `/api/task-files/${taskId}/undo`
+  },
+
+  // Push Notification Endpoints
+  PUSH_NOTIFICATIONS: {
+    REGISTER: '/api/push-notifications/register',
+    SEND: '/api/push-notifications/send',
+    TEST: '/api/push-notifications/test',
+    TEST_FCM: '/api/push-notifications/test-fcm',
+    STATUS: '/api/push-notifications/status',
+    LOGOUT: '/api/push-notifications/logout',
+    TOKENS: '/api/push-notifications/tokens',
+    DEACTIVATE_TOKEN: (tokenId) => `/api/push-notifications/tokens/${tokenId}`
+  },
+
+  // Enhanced Notification Endpoints (NotificationController)
+  ENHANCED_NOTIFICATIONS: {
+    TEST_WITH_PUSH: '/api/notifications/test-with-push',
+    BULK_SEND: '/api/notifications/bulk-send',
+    SEND_PRIORITY: '/api/notifications/send-priority',
+    HISTORY: (userId, companyId) => `/api/notifications/history/${userId}/company/${companyId}`,
+    SEND_TEMPLATE: '/api/notifications/send-template'
+  },
+
+  // Announcement Endpoints (AnnouncementController)
+  ANNOUNCEMENTS: {
+    CREATE: '/api/announcements',
+    GET_ALL: '/api/announcements',
+    GET_BY_ID: (id) => `/api/announcements/${id}`,
+    UPDATE: (id) => `/api/announcements/${id}`,
+    DELETE: (id) => `/api/announcements/${id}`,
+    GET_BY_PRIORITY: (priority) => `/api/announcements/priority/${priority}`
   }
 };
 

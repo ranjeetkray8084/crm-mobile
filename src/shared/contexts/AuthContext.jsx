@@ -7,7 +7,6 @@ export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     // Return a proper fallback context instead of just logging a warning
-    console.log('🔧 useAuth: Context not available, using fallback (this is normal during initial render)');
     return {
       user: null,
       loading: true,
@@ -35,14 +34,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        console.log('🔧 AuthProvider: Initializing...');
         setError(null);
         
         // Check for stored credentials
         const currentUser = await AuthService.getCurrentUser();
         const token = await AuthService.getToken();
 
-        console.log('🔧 AuthProvider: Stored user:', !!currentUser, 'Stored token:', !!token);
 
         if (currentUser && token) {
           // Set axios header for future requests
@@ -55,11 +52,9 @@ export const AuthProvider = ({ children }) => {
           // Since backend doesn't have session check, we'll just use stored credentials
           setUser(currentUser);
           setIsAuthenticated(true);
-          console.log('🔧 AuthProvider: User authenticated from stored credentials');
         } else {
           setUser(null);
           setIsAuthenticated(false);
-          console.log('🔧 AuthProvider: No stored credentials found');
         }
       } catch (error) {
         console.error('🔧 AuthProvider: Failed to initialize auth:', error);
@@ -71,7 +66,6 @@ export const AuthProvider = ({ children }) => {
         // Mark the context as ready after initialization
         setTimeout(() => {
           setIsReady(true);
-          console.log('🔧 AuthProvider: Context ready');
         }, 100);
       }
     };
@@ -80,12 +74,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
-    console.log('🔧 AuthProvider: login function called with:', { email: credentials.email, password: '***' });
     setLoading(true);
     setError(null);
     
     try {
-      console.log('🔧 AuthProvider: About to call AuthService.login...');
       
       if (!AuthService || !AuthService.login) {
         const errorMsg = 'Authentication service not available';
@@ -95,10 +87,8 @@ export const AuthProvider = ({ children }) => {
       }
       
       const result = await AuthService.login(credentials);
-      console.log('🔧 AuthProvider: AuthService.login result:', result);
 
       if (result && result.success) {
-        console.log('🔧 AuthProvider: Login successful, saving session...');
         
         // Extract user and token from the result
         const userData = result.user || result.data;
@@ -111,7 +101,6 @@ export const AuthProvider = ({ children }) => {
             setIsAuthenticated(true);
             setError(null);
             
-            console.log('🔧 AuthProvider: User authenticated successfully:', userData);
             
             return { success: true, user: userData, message: result.message || 'Login successful' };
           } catch (sessionError) {

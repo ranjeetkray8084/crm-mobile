@@ -1,4 +1,6 @@
-import React, { createContext, useContext } from 'react';
+import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface NotificationContextType {
   expoNotificationsAvailable: boolean;
@@ -10,6 +12,8 @@ interface NotificationContextType {
   getBadgeCount: () => Promise<number>;
   setBadgeCount: (count: number) => Promise<void>;
   isSupported: boolean;
+  isInitialized: boolean;
+  serviceStatus: any;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -17,29 +21,78 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
   if (!context) {
-    console.warn('useNotifications must be used within a NotificationProvider');
-    // Return a fallback context instead of throwing an error
-    return {
-      expoNotificationsAvailable: false,
-      requestPermissions: async () => false,
-      scheduleNotification: async () => null,
-      sendImmediateNotification: async () => null,
-      cancelNotification: async () => {},
-      cancelAllNotifications: async () => {},
-      getBadgeCount: async () => 0,
-      setBadgeCount: async () => {},
-      isSupported: false,
-    };
+    throw new Error('useNotifications must be used within a NotificationProvider');
   }
   return context;
 };
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  console.log('🔧 NotificationContext: Using simplified notification context (notifications disabled)');
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState({
+    firebaseAvailable: false,
+    serviceType: 'Unknown'
+  });
+
+  useEffect(() => {
+    const initializeNotifications = async () => {
+      try {
+        // Check if device supports notifications
+        const isSupported = Device.isDevice;
+        
+        if (!isSupported) {
+          console.log('🔔 Notifications not supported on simulator');
+          setServiceStatus(prev => ({ ...prev, serviceType: 'Not Supported' }));
+          setIsInitialized(true);
+          return;
+        }
+
+        // Configure notification behavior
+        Notifications.setNotificationHandler({
+          handleNotification: async () => ({
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: true,
+            shouldShowBanner: true,
+            shouldShowList: true,
+          }),
+        });
+
+        // Check permissions
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+
+        if (finalStatus !== 'granted') {
+          console.log('🔔 Notification permission not granted');
+          setServiceStatus(prev => ({ ...prev, serviceType: 'Permission Denied' }));
+        } else {
+          console.log('🔔 Notification permission granted');
+          setServiceStatus(prev => ({ ...prev, serviceType: 'Expo Notifications' }));
+        }
+
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('🔔 Notification initialization error:', error);
+        setServiceStatus(prev => ({ ...prev, serviceType: 'Error' }));
+        setIsInitialized(true);
+      }
+    };
+
+    initializeNotifications();
+  }, []);
 
   const requestPermissions = async (): Promise<boolean> => {
-    console.log('🔧 Notifications disabled - cannot request permissions');
-    return false;
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      return status === 'granted';
+    } catch (error) {
+      console.error('🔔 Permission request error:', error);
+      return false;
+    }
   };
 
   const scheduleNotification = async (
@@ -48,8 +101,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     data?: any, 
     trigger?: any
   ): Promise<string | null> => {
-    console.log('🔧 Notifications disabled - cannot schedule notification');
-    return null;
+    try {
+      const identifier = await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          data,
+        },
+        trigger,
+      });
+      return identifier;
+    } catch (error) {
+      console.error('🔔 Schedule notification error:', error);
+      return null;
+    }
   };
 
   const sendImmediateNotification = async (
@@ -57,29 +122,44 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     body: string, 
     data?: any
   ): Promise<string | null> => {
-    console.log('🔧 Notifications disabled - cannot send immediate notification');
-    return null;
+    return scheduleNotification(title, body, data, null);
   };
 
   const cancelNotification = async (identifier: string): Promise<void> => {
-    console.log('🔧 Notifications disabled - cannot cancel notification');
+    try {
+      await Notifications.cancelScheduledNotificationAsync(identifier);
+    } catch (error) {
+      console.error('🔔 Cancel notification error:', error);
+    }
   };
 
   const cancelAllNotifications = async (): Promise<void> => {
-    console.log('🔧 Notifications disabled - cannot cancel all notifications');
+    try {
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    } catch (error) {
+      console.error('🔔 Cancel all notifications error:', error);
+    }
   };
 
   const getBadgeCount = async (): Promise<number> => {
-    console.log('🔧 Notifications disabled - cannot get badge count');
-    return 0;
+    try {
+      return await Notifications.getBadgeCountAsync();
+    } catch (error) {
+      console.error('🔔 Get badge count error:', error);
+      return 0;
+    }
   };
 
   const setBadgeCount = async (count: number): Promise<void> => {
-    console.log('🔧 Notifications disabled - cannot set badge count');
+    try {
+      await Notifications.setBadgeCountAsync(count);
+    } catch (error) {
+      console.error('🔔 Set badge count error:', error);
+    }
   };
 
   const contextValue: NotificationContextType = {
-    expoNotificationsAvailable: false,
+    expoNotificationsAvailable: true,
     requestPermissions,
     scheduleNotification,
     sendImmediateNotification,
@@ -87,7 +167,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     cancelAllNotifications,
     getBadgeCount,
     setBadgeCount,
-    isSupported: false,
+    isSupported: Device.isDevice,
+    isInitialized,
+    serviceStatus,
   };
 
   return (

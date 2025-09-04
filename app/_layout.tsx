@@ -1,15 +1,16 @@
+// Import Firebase initialization first
+import "../src/core/config/firebase.direct";
+
 import { Stack } from "expo-router";
+import FCMHandler from "../src/components/common/FCMHandler";
 import { AuthProvider } from "../src/shared/contexts/AuthContext";
 import { NotificationProvider } from "../src/shared/contexts/NotificationContext";
-import NotificationHandler from "../src/components/common/NotificationHandler";
 
 export default function RootLayout() {
-  console.log('🔔 DEBUG: RootLayout: Rendering...');
-
   return (
     <NotificationProvider>
       <AuthProvider>
-        <NotificationHandler />
+        <FCMHandler />
         <Stack 
           initialRouteName="login"
           screenOptions={{
@@ -23,13 +24,9 @@ export default function RootLayout() {
           <Stack.Screen name="add-note" />
           <Stack.Screen name="add-task" />
           <Stack.Screen name="add-user" />
-          <Stack.Screen name="notification-test" />
-          <Stack.Screen name="push-test" />
           <Stack.Screen name="+not-found" />
         </Stack>
       </AuthProvider>
     </NotificationProvider>
   );
 }
-
-

@@ -1,152 +1,137 @@
-// Notifications Hook - Refactored for Web & Mobile
-import React, { useState, useEffect, useCallback } from 'react';
+// useNotifications Hook - For regular in-app notifications
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from '../../shared/contexts/AuthContext';
 import { NotificationService } from '../services/notification.service';
-import { customAlert } from '../utils/alertUtils'; // Assuming this utility exists
 
 export const useNotifications = (userId, companyId) => {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // --- Primary Data Loading Functions ---
+  // Use provided userId/companyId or fallback to current user
+  const effectiveUserId = userId || user?.userId || user?.id;
+  const effectiveCompanyId = companyId || user?.companyId;
 
+  // Load notifications
   const loadNotifications = useCallback(async () => {
-    if (!userId || !companyId) return;
-    
+    if (!effectiveUserId || !effectiveCompanyId) return;
+
     setLoading(true);
     setError(null);
+
     try {
-      const result = await NotificationService.getNotificationsByUserAndCompany(userId, companyId);
+      const result = await NotificationService.getNotificationsByUserAndCompany(
+        effectiveUserId, 
+        effectiveCompanyId
+      );
+
       if (result.success) {
-        setNotifications(result.data);
+        setNotifications(result.data || []);
+        setUnreadCount(result.data?.filter(n => !n.isRead).length || 0);
       } else {
         setError(result.error);
-        customAlert(`❌ ${result.error || 'Failed to load notifications'}`);
       }
     } catch (err) {
-      setError('Failed to load notifications');
-      customAlert('❌ Failed to load notifications');
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [userId, companyId]);
+  }, [effectiveUserId, effectiveCompanyId]);
 
+  // Load unread count only
   const loadUnreadCount = useCallback(async () => {
-    if (!userId || !companyId) return;
-    
+    if (!effectiveUserId || !effectiveCompanyId) return;
+
     try {
-      const result = await NotificationService.getUnreadCount(userId, companyId);
+      const result = await NotificationService.getUnreadCountByUserAndCompany(
+        effectiveUserId, 
+        effectiveCompanyId
+      );
+
       if (result.success) {
-        setUnreadCount(result.data);
-      } else {
-        setError(result.error);
+        setUnreadCount(result.data || 0);
       }
     } catch (err) {
-      setError('Failed to load unread count');
+      console.error('Failed to load unread count:', err);
     }
-  }, [userId, companyId]);
+  }, [effectiveUserId, effectiveCompanyId]);
 
-  // --- Helper Functions for Actions ---
+  // Mark notification as read
+  const markAsRead = useCallback(async (notificationId) => {
+    if (!effectiveUserId || !effectiveCompanyId) return { success: false };
 
-  // Helper for actions that MODIFY data and then refresh the state.
-  const executeNotificationAction = useCallback(async (apiCall, successMsg, errorMsg) => {
-    if (!userId || !companyId) {
-
-      return { success: false, error: 'User and Company ID are required' };
-    }
-    
     try {
-      const result = await apiCall();
+      const result = await NotificationService.markAsRead(
+        notificationId, 
+        effectiveUserId, 
+        effectiveCompanyId
+      );
+
       if (result.success) {
-        // After a successful action, reload both notifications and the unread count.
-        await Promise.all([loadNotifications(), loadUnreadCount()]);
-        return { success: true, message: result.message };
-      } else {
-        setError(result.error);
-        return { success: false, error: result.error };
+        // Update local state
+        setNotifications(prev => 
+          prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
+        );
+        setUnreadCount(prev => Math.max(0, prev - 1));
       }
-    } catch (err) {
-      setError(errorMsg);
-      return { success: false, error: errorMsg };
-    }
-  }, [userId, companyId, loadNotifications, loadUnreadCount]);
 
-  // Helper for actions that only FETCH data and do not affect the hook's state.
-  const fetchNotificationData = useCallback(async (apiCall, errorMsg) => {
-    if (!userId || !companyId) {
-      return { success: false, error: 'User and Company ID are required' };
+      return result;
+    } catch (err) {
+      return { success: false, error: err.message };
     }
+  }, [effectiveUserId, effectiveCompanyId]);
+
+  // Mark all notifications as read
+  const markAllAsRead = useCallback(async () => {
+    if (!effectiveUserId || !effectiveCompanyId) return { success: false };
+
     try {
-      return await apiCall();
+      const result = await NotificationService.markAllAsRead(
+        effectiveUserId, 
+        effectiveCompanyId
+      );
+
+      if (result.success) {
+        // Update local state
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+      }
+
+      return result;
     } catch (err) {
-      return { success: false, error: errorMsg };
+      return { success: false, error: err.message };
     }
-  }, [userId, companyId]);
+  }, [effectiveUserId, effectiveCompanyId]);
 
-  // --- Exported Functions ---
+  // Refresh notifications
+  const refreshNotifications = useCallback(async () => {
+    await loadNotifications();
+  }, [loadNotifications]);
 
-  const markAsRead = (notificationId) =>
-    executeNotificationAction(
-      () => NotificationService.markAsRead(notificationId),
-      'Notification marked as read',
-      'Failed to mark notification as read'
-    );
-
-  const markAllAsRead = () =>
-    executeNotificationAction(
-      () => NotificationService.markAllAsRead(userId, companyId),
-      'All notifications marked as read',
-      'Failed to mark all as read'
-    );
-  
-  const sendNotification = (actorUserId, message) =>
-    fetchNotificationData(
-      () => NotificationService.sendNotification(actorUserId, companyId, message),
-      'Failed to send notification'
-    );
-
-  const loadUnreadNotifications = () =>
-    fetchNotificationData(
-      () => NotificationService.getUnreadNotificationsByUserAndCompany(userId, companyId),
-      'Failed to load unread notifications'
-    );
-
-  const refreshNotifications = useCallback(() => {
-    return Promise.all([loadNotifications(), loadUnreadCount()]);
-  }, [loadNotifications, loadUnreadCount]);
-
-  const clearError = () => setError(null);
-
-  // --- Effects ---
-
-  // Initial load when the component mounts or IDs change.
+  // Load notifications on mount and when dependencies change
   useEffect(() => {
-    if (userId && companyId) {
-      refreshNotifications();
-    }
-  }, [userId, companyId, refreshNotifications]);
+    loadNotifications();
+  }, [loadNotifications]);
 
-  // Auto-refresh the unread count every 5 seconds.
+  // Set up periodic refresh for unread count
   useEffect(() => {
-    if (!userId || !companyId) return;
+    if (!effectiveUserId || !effectiveCompanyId) return;
 
-    const intervalId = setInterval(loadUnreadCount, 5000); // 5 seconds
-    return () => clearInterval(intervalId);
-  }, [userId, companyId, loadUnreadCount]);
+    const interval = setInterval(loadUnreadCount, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, [loadUnreadCount, effectiveUserId, effectiveCompanyId]);
 
   return {
     notifications,
     unreadCount,
     loading,
     error,
-    loadNotifications,
-    loadUnreadNotifications,
-    loadUnreadCount,
     markAsRead,
     markAllAsRead,
-    sendNotification,
     refreshNotifications,
-    clearError
+    loadNotifications,
+    loadUnreadCount
   };
 };

@@ -58,6 +58,14 @@
         "buildConfiguration": "Release",
         "credentialsSource": "remote"
       }
+    },
+    "local": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "node": "18.19.0"
     }
   },
   "submit": {

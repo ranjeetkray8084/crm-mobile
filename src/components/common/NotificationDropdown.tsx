@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import {
+  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useNotifications } from '../../core/hooks/useNotifications';
 import { useAuth } from '../../shared/contexts/AuthContext';
-import { useRouter } from 'expo-router';
 
 interface NotificationDropdownProps {
   onSectionChange?: (section: string) => void;
@@ -30,7 +30,7 @@ export default function NotificationDropdown({ onSectionChange }: NotificationDr
       // Mark all notifications as read when bell icon is clicked
       if (unreadCount > 0) {
         const result = await markAllAsRead();
-        if (!result.success) {
+        if (result && !result.success) {
           Alert.alert('Error', 'Failed to mark notifications as read');
         }
       }
@@ -99,4 +99,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

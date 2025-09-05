@@ -36,26 +36,35 @@ export const AuthProvider = ({ children }) => {
       try {
         setError(null);
         
-        // Check for stored credentials
-        const currentUser = await AuthService.getCurrentUser();
-        const token = await AuthService.getToken();
+        // Add timeout to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Auth initialization timeout')), 10000);
+        });
+        
+        const authPromise = (async () => {
+          // Check for stored credentials
+          const currentUser = await AuthService.getCurrentUser();
+          const token = await AuthService.getToken();
 
-
-        if (currentUser && token) {
-          // Set axios header for future requests
-          try {
-            AuthService.setAxiosHeader(token);
-          } catch (headerError) {
-            console.warn('🔧 Could not set axios header:', headerError);
+          if (currentUser && token) {
+            // Set axios header for future requests
+            try {
+              AuthService.setAxiosHeader(token);
+            } catch (headerError) {
+              console.warn('🔧 Could not set axios header:', headerError);
+            }
+            
+            // Since backend doesn't have session check, we'll just use stored credentials
+            setUser(currentUser);
+            setIsAuthenticated(true);
+          } else {
+            setUser(null);
+            setIsAuthenticated(false);
           }
-          
-          // Since backend doesn't have session check, we'll just use stored credentials
-          setUser(currentUser);
-          setIsAuthenticated(true);
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
-        }
+        })();
+        
+        await Promise.race([authPromise, timeoutPromise]);
+        
       } catch (error) {
         console.error('🔧 AuthProvider: Failed to initialize auth:', error);
         setError(error.message || 'Authentication initialization failed');

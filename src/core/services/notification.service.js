@@ -46,6 +46,16 @@ export class NotificationService {
   }
 
   /**
+   * Get unread notifications count by user and company (alias for getUnreadCount)
+   * @param {number} userId 
+   * @param {number} companyId 
+   * @returns {Promise<Object>} API response
+   */
+  static async getUnreadCountByUserAndCompany(userId, companyId) {
+    return this.getUnreadCount(userId, companyId);
+  }
+
+  /**
    * Get notifications by user and company
    * @param {number} userId 
    * @param {number} companyId 

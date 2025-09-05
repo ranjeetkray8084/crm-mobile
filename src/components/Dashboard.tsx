@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import '../core/config/firebase.direct'; // Initialize Firebase
+// Firebase initialization moved to conditional loading in _layout.tsx
 import { useResponsive } from '../core/hooks/useResponsive';
 import { useAuth } from '../shared/contexts/AuthContext';
 import AdminSection from './admins/AdminSection';

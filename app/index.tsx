@@ -1,8 +1,8 @@
 // app/index.tsx
-import React, { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../src/shared/contexts/AuthContext';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 export default function Index() {
   const router = useRouter();
@@ -24,15 +24,20 @@ export default function Index() {
 
     if (!loading) {
       try {
-        if (isAuthenticated) {
-          console.log('Index: User authenticated, navigating to tabs');
-          setHasNavigated(true);
-          router.replace('/(tabs)');
-        } else {
-          console.log('Index: User not authenticated, navigating to login');
-          setHasNavigated(true);
-          router.replace('/login');
-        }
+        // Add a small delay to ensure everything is properly initialized
+        const navigationTimer = setTimeout(() => {
+          if (isAuthenticated) {
+            console.log('Index: User authenticated, navigating to tabs');
+            setHasNavigated(true);
+            router.replace('/(tabs)');
+          } else {
+            console.log('Index: User not authenticated, navigating to login');
+            setHasNavigated(true);
+            router.replace('/login');
+          }
+        }, 200);
+
+        return () => clearTimeout(navigationTimer);
       } catch (error) {
         console.error('Index: Navigation error:', error);
         // Fallback to login on error

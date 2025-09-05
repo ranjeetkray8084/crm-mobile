@@ -1,6 +1,5 @@
 // FCM Service - Properly integrated with backend API
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import messaging from '@react-native-firebase/messaging';
 import { Platform } from 'react-native';
 import axios from '../../legacy/api/axios';
 import { API_ENDPOINTS } from './api.endpoints';
@@ -28,32 +27,41 @@ class FCMService {
    */
   async initialize() {
     try {
-      if (!messaging) {
+      // Check if we're in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('FCM service initialization skipped in development mode');
+        return { success: false, error: 'FCM not available in development mode' };
+      }
+
+      // Dynamically import Firebase modules
+      const firebase = await import('@react-native-firebase/app');
+      const messagingModule = await import('@react-native-firebase/messaging');
+      
+      if (!messagingModule.default) {
         throw new Error('Firebase messaging not available');
       }
 
-      const firebase = require('@react-native-firebase/app');
       const firebaseApp = firebase.default.app();
       
       if (!firebaseApp) {
         throw new Error('Firebase app not initialized');
       }
 
-      const permissionResult = await this.requestNotificationPermissions();
+      const permissionResult = await this.requestNotificationPermissions(messagingModule.default);
       if (!permissionResult.success) {
         return { success: false, error: permissionResult.error };
       }
 
       this.isPermissionGranted = true;
 
-      const tokenResult = await this.getFCMToken();
+      const tokenResult = await this.getFCMToken(firebase.default, messagingModule.default);
       if (!tokenResult.success) {
         return { success: false, error: tokenResult.error };
       }
 
       this.fcmToken = tokenResult.token;
       this.isInitialized = true;
-      this.setupMessageHandlers();
+      this.setupMessageHandlers(messagingModule.default);
 
       return { success: true, token: this.fcmToken };
 
@@ -65,9 +73,9 @@ class FCMService {
   /**
    * Request notification permissions
    */
-  async requestNotificationPermissions() {
+  async requestNotificationPermissions(messagingInstance) {
     try {
-      const authStatus = await messaging().requestPermission({
+      const authStatus = await messagingInstance().requestPermission({
         alert: true,
         announcement: false,
         badge: true,
@@ -77,8 +85,8 @@ class FCMService {
         sound: true,
       });
 
-      const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-                     authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+      const enabled = authStatus === messagingInstance.AuthorizationStatus.AUTHORIZED ||
+                     authStatus === messagingInstance.AuthorizationStatus.PROVISIONAL;
 
       if (!enabled) {
         return { success: false, error: 'Notification permission not granted' };
@@ -96,7 +104,7 @@ class FCMService {
   /**
    * Get FCM token
    */
-  async getFCMToken() {
+  async getFCMToken(firebaseInstance, messagingInstance) {
     try {
       const cachedToken = await AsyncStorage.getItem(FCMService.STORAGE_KEYS.FCM_TOKEN);
       if (cachedToken && this.isValidFCMToken(cachedToken)) {
@@ -104,8 +112,7 @@ class FCMService {
         return { success: true, token: cachedToken };
       }
 
-      const firebase = require('@react-native-firebase/app');
-      const firebaseApp = firebase.default.app();
+      const firebaseApp = firebaseInstance.app();
       
       if (!firebaseApp || !firebaseApp.options) {
         throw new Error('Firebase app options not available - please check configuration files');
@@ -116,7 +123,7 @@ class FCMService {
         throw new Error('Invalid Firebase API key - please update configuration files');
       }
 
-      const token = await messaging().getToken();
+      const token = await messagingInstance().getToken();
       
       if (!token || !this.isValidFCMToken(token)) {
         throw new Error('Failed to get valid FCM token');
@@ -257,29 +264,29 @@ class FCMService {
   /**
    * Set up FCM message handlers
    */
-  setupMessageHandlers() {
+  setupMessageHandlers(messagingInstance) {
     console.log('🔥 FCMService: Setting up FCM message handlers...');
 
     // Handle background messages
-    messaging().setBackgroundMessageHandler(async remoteMessage => {
+    messagingInstance().setBackgroundMessageHandler(async remoteMessage => {
       console.log('🔥 FCMService: Background message received:', remoteMessage);
       this.handleNotificationReceived(remoteMessage);
     });
 
     // Handle foreground messages
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
+    const unsubscribe = messagingInstance().onMessage(async remoteMessage => {
       console.log('🔥 FCMService: Foreground message received:', remoteMessage);
       this.handleNotificationReceived(remoteMessage);
     });
 
     // Handle notification tap
-    messaging().onNotificationOpenedApp(remoteMessage => {
+    messagingInstance().onNotificationOpenedApp(remoteMessage => {
       console.log('🔥 FCMService: Notification opened app:', remoteMessage);
       this.handleNotificationResponse(remoteMessage);
     });
 
     // Handle notification tap when app is closed
-    messaging()
+    messagingInstance()
       .getInitialNotification()
       .then(remoteMessage => {
         if (remoteMessage) {

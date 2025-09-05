@@ -63,11 +63,7 @@ export const useNotifications = (userId, companyId) => {
     if (!effectiveUserId || !effectiveCompanyId) return { success: false };
 
     try {
-      const result = await NotificationService.markAsRead(
-        notificationId, 
-        effectiveUserId, 
-        effectiveCompanyId
-      );
+      const result = await NotificationService.markAsRead(notificationId);
 
       if (result.success) {
         // Update local state

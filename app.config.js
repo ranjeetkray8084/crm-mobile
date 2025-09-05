@@ -91,26 +91,7 @@ export default {
 
     },
     plugins: [
-      "expo-dev-client",
-      [
-        "@react-native-firebase/app",
-        {
-          android: {
-            googleServicesFile: "./android/app/google-services.json"
-          },
-          ios: {
-            googleServicesFile: "./ios/GoogleService-Info.plist"
-          }
-        }
-      ],
-      [
-        "@react-native-firebase/messaging",
-        {
-          android: {
-            requestIgnoreBatteryOptimizations: true
-          }
-        }
-      ],
+      "expo-router",
       [
         "expo-notifications",
         {
@@ -134,8 +115,7 @@ export default {
           "iosBadge": true,
           "iosCritical": false
         }
-      ],
-      "expo-router"
+      ]
     ]
   }
 };

@@ -1,6 +1,5 @@
 // Notification Permission Service
 import { Alert, Linking, Platform } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
 
 export class NotificationPermissionService {
   
@@ -9,9 +8,17 @@ export class NotificationPermissionService {
    */
   static async checkPermission() {
     try {
-      const authStatus = await messaging().hasPermission();
-      const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-                     authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+      // Check if we're in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('NotificationPermissionService: Skipped in development mode');
+        return { granted: false, status: null };
+      }
+
+      // Dynamically import Firebase messaging
+      const messaging = await import('@react-native-firebase/messaging');
+      const authStatus = await messaging.default().hasPermission();
+      const enabled = authStatus === messaging.default.AuthorizationStatus.AUTHORIZED ||
+                     authStatus === messaging.default.AuthorizationStatus.PROVISIONAL;
       
       return {
         granted: enabled,
@@ -28,9 +35,17 @@ export class NotificationPermissionService {
    */
   static async requestPermission() {
     try {
+      // Check if we're in development mode
+      if (process.env.NODE_ENV === 'development') {
+        console.log('NotificationPermissionService: Skipped in development mode');
+        return { granted: false, status: null };
+      }
+
       console.log('🔥 NotificationPermissionService: Requesting notification permission...');
       
-      const authStatus = await messaging().requestPermission({
+      // Dynamically import Firebase messaging
+      const messaging = await import('@react-native-firebase/messaging');
+      const authStatus = await messaging.default().requestPermission({
         alert: true,
         announcement: false,
         badge: true,
@@ -40,8 +55,8 @@ export class NotificationPermissionService {
         sound: true,
       });
       
-      const granted = authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-                     authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+      const granted = authStatus === messaging.default.AuthorizationStatus.AUTHORIZED ||
+                     authStatus === messaging.default.AuthorizationStatus.PROVISIONAL;
       
       console.log('🔥 NotificationPermissionService: Permission result:', authStatus, 'Granted:', granted);
       
@@ -128,7 +143,7 @@ export class NotificationPermissionService {
       
       return {
         granted,
-        status: granted ? messaging.AuthorizationStatus.AUTHORIZED : messaging.AuthorizationStatus.DENIED
+        status: granted ? 'AUTHORIZED' : 'DENIED'
       };
       
     } catch (error) {

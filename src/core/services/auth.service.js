@@ -1,7 +1,7 @@
 // Authentication Service - Reusable for Web & Mobile
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from '../../legacy/api/axios';
-import '../config/firebase.direct'; // Initialize Firebase
+// Firebase initialization moved to conditional loading in _layout.tsx
 import { API_ENDPOINTS } from './api.endpoints';
 import FCMService from './fcm.service';
 

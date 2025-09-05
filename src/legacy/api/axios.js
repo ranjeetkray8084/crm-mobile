@@ -83,7 +83,7 @@ axiosInstance.interceptors.request.use(
 
       console.log('Making request to:', config.baseURL + config.url);
       
-      // Add authentication token if available - use same key as web version
+      // Add authentication token if available - use same key as AuthService
       const token = await AsyncStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;

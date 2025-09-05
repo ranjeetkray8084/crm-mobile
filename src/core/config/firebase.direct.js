@@ -1,14 +1,21 @@
-// Firebase Initialization
-import firebase from '@react-native-firebase/app';
-import '@react-native-firebase/messaging';
-
+// Firebase Initialization - Safe version
 let firebaseInitialized = false;
 let firebaseError = null;
 let firebaseApp = null;
 
-const initializeFirebase = () => {
+const initializeFirebase = async () => {
   try {
-    firebaseApp = firebase.app();
+    // Check if we're in a development environment
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Firebase initialization skipped in development mode');
+      return false;
+    }
+
+    // Dynamically import Firebase to avoid early initialization issues
+    const firebase = await import('@react-native-firebase/app');
+    const messaging = await import('@react-native-firebase/messaging');
+    
+    firebaseApp = firebase.default.app();
     
     if (!firebaseApp || !firebaseApp.options) {
       throw new Error('Firebase app not properly configured');
@@ -20,8 +27,7 @@ const initializeFirebase = () => {
     }
     
     // Set up background message handler
-    const messaging = require('@react-native-firebase/messaging').default;
-    messaging().setBackgroundMessageHandler(async remoteMessage => {
+    messaging.default().setBackgroundMessageHandler(async remoteMessage => {
       // Handle background messages
     });
     
@@ -30,10 +36,12 @@ const initializeFirebase = () => {
     
   } catch (error) {
     firebaseError = error.message;
+    console.warn('Firebase initialization failed:', error.message);
     return false;
   }
 };
 
+// Initialize Firebase asynchronously
 initializeFirebase();
 
 export { firebaseApp, firebaseError, firebaseInitialized };

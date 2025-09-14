@@ -1137,25 +1137,6 @@ const UsersAdminsOverviewCard = ({ usersOverview }: {
        color: '#059669',
        fontWeight: '500',
      },
-     // Loading, Error, and Empty state styles
-     loadingContainer: {
-       alignItems: 'center',
-       paddingVertical: 20,
-     },
-     loadingText: {
-       fontSize: 14,
-       color: '#6b7280',
-       fontStyle: 'italic',
-     },
-     errorContainer: {
-       alignItems: 'center',
-       paddingVertical: 20,
-     },
-     errorText: {
-       fontSize: 14,
-       color: '#ef4444',
-       fontStyle: 'italic',
-     },
      emptyContainer: {
        alignItems: 'center',
        paddingVertical: 20,

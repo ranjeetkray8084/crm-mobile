@@ -3,7 +3,6 @@ export { default as NotesList } from './NotesList';
 export { default as NotesToolbar } from './NotesToolbar';
 export { default as NotesFilters } from './NotesFilters';
 export { default as NoteCard } from './NoteCard';
-export { default as NotesDemo } from './NotesDemo';
 export { default as NoteActions } from './NoteActions';
 export { default as NoteDetails } from './NoteDetails';
 export { default as NoteActionMenu } from './NoteActionMenu';

@@ -4,7 +4,6 @@ import { useProperties } from '../../core/hooks/useProperties';
 import { usePropertySearch } from '../../core/hooks/usePropertySearch';
 import { useUsers } from '../../core/hooks/useUsers';
 import { exportProperties, exportPropertiesWithRole, exportPropertiesWithRoleAndDownload, exportDataWithDynamicColumns } from '../../core/utils/excelExport';
-import { exportPropertiesSimple } from '../../core/utils/simpleExcelExport';
 import { exportPropertiesFromBackend } from '../../core/utils/backendExcelExport';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PropertyToolbar from './PropertyToolbar';

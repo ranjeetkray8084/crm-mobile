@@ -177,8 +177,7 @@ export const API_ENDPOINTS = {
     GET_OVERVIEW: (companyId) => `/api/companies/${companyId}/properties/overview`,
     COUNT_PROPERTY_OVERVIEW: (companyId) => `/api/companies/${companyId}/properties/count/overview`,
     COUNT_BY_USER: (companyId, userId) => `/api/companies/${companyId}/properties/created-by/${userId}/count`,
-    SEARCH_PAGED: (companyId) => `/api/companies/${companyId}/properties/search-paged`,
-    COUNT_PROPERTY_OVERVIEW: (companyId) => `/api/companies/${companyId}/properties/count/property-overview`
+    SEARCH_PAGED: (companyId) => `/api/companies/${companyId}/properties/search-paged`
   },
 
   // Task File Management Endpoints (TaskFileController)

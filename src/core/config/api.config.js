@@ -4,7 +4,7 @@
 export const API_CONFIG = {
   // Development - Change this IP to match your computer's IP address
   DEVELOPMENT: {
-    baseURL: 'https://backend.leadstracker.in', // Production backend
+    baseURL: 'https://backend.leadstracker.in', // Local backend (matching your logs)
     timeout: 30000,
     retryAttempts: 3,
     retryDelay: 1000
@@ -12,7 +12,7 @@ export const API_CONFIG = {
   
   // Production
   PRODUCTION: {
-    baseURL: 'https://backend.leadstracker.in',
+    baseURL: 'https://backend.leadstracker.in', // Local backend
     timeout: 30000,
     retryAttempts: 3,
     retryDelay: 1000
@@ -37,13 +37,15 @@ export const API_ENDPOINTS = {
     VERIFY: '/api/auth/verify',
   },
   
-  // Push Notifications
+  // Push Notifications - UPDATED FOR SIMPLE IMPLEMENTATION
   PUSH_NOTIFICATIONS: {
-    REGISTER: '/api/push-notifications/register',
-    LOGOUT: '/api/push-notifications/logout',
-    STATUS: '/api/push-notifications/status',
-    TEST: '/api/push-notifications/test',
-    TOKENS: '/api/push-notifications/tokens',
+    REGISTER: '/api/push-tokens/register',
+    LOGOUT: '/api/push-tokens/user/{userId}/deactivate-all',
+    LOGOUT_DEVICE: '/api/push-tokens/device/{deviceId}',
+    SEND_TO_USER: (userId) => `/api/push-tokens/send`,
+    STATUS: '/api/push-tokens/stats',
+    TEST: '/api/push-tokens/test',
+    TOKENS: '/api/push-tokens/user/{userId}/devices',
   },
   
   // Notifications
@@ -69,6 +71,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id) => `/api/users/${id}`,
     DELETE: (id) => `/api/users/${id}`,
     PROFILE: '/api/users/profile',
+    GET_AVATAR: (id) => `/api/users/${id}/avatar`,
   },
   
   // Companies
@@ -137,7 +140,7 @@ export const updateLocalIp = (newIp) => {
     // Validate IP format (basic validation)
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (ipRegex.test(cleanIp)) {
-      API_CONFIG.DEVELOPMENT.baseURL = `http://${cleanIp}:8082`;
+      API_CONFIG.DEVELOPMENT.baseURL = `http://${cleanIp}:8083`;
       console.log(`✅ API IP updated to: ${API_CONFIG.DEVELOPMENT.baseURL}`);
       return true;
     } else {

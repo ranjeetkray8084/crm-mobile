@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { CompanyService } from '../../core/services';
 
 interface AddCompanyFormProps {
   onSuccess: () => void;
@@ -59,17 +60,21 @@ const AddCompanyForm: React.FC<AddCompanyFormProps> = ({ onSuccess, onCancel }) 
     };
 
     try {
-      // This would need to be implemented in your CompanyService
-      // For now, we'll show a success message
-      Alert.alert('Success', 'Company created successfully!');
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        maxUsers: '',
-        maxAdmins: '',
-      });
-      onSuccess();
+      const result = await CompanyService.addCompany(companyData);
+      
+      if (result.success) {
+        Alert.alert('Success', 'Company created successfully!');
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          maxUsers: '',
+          maxAdmins: '',
+        });
+        onSuccess();
+      } else {
+        Alert.alert('Error', result.error || 'Failed to create company');
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Error creating company');
     } finally {

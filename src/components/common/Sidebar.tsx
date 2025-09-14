@@ -45,6 +45,18 @@ export default function Sidebar({
     try {
       console.log('🔧 Sidebar: Fetching avatar for user:', userId);
       
+      // First check if user has avatar filename from login response
+      if (user?.avatar && user.avatar !== 'null' && user.avatar !== '') {
+        console.log('🔧 Sidebar: User has avatar filename:', user.avatar);
+        // Construct full avatar URL
+        const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://backend.leadstracker.in';
+        const avatarUrl = `${baseURL}/api/users/${userId}/avatar`;
+        console.log('🔧 Sidebar: Constructed avatar URL:', avatarUrl);
+        setAvatarUrl(avatarUrl);
+        return;
+      }
+      
+      // Fallback: Try to get avatar from API
       const result = await UserService.getAvatar(userId) as any;
       console.log('🔧 Sidebar: Avatar API result:', result);
       
@@ -64,7 +76,6 @@ export default function Sidebar({
   const getMenuItems = () => {
     const commonItems = [
       { id: 'dashboard', label: 'Dashboard', icon: 'grid-outline' },
-    
     ];
 
     const roleSpecificItems = {
@@ -76,9 +87,7 @@ export default function Sidebar({
         { id: 'account', label: 'Account Settings', icon: 'person-outline' },
       ],
       DEVELOPER: [
-        { id: 'addCompany', label: 'Add Company', icon: 'add-circle-outline' },
         { id: 'viewCompany', label: 'View Company', icon: 'eye-outline' },
-        { id: 'addAdmin', label: 'Add Admin / Users', icon: 'person-add-outline' },
         { id: 'viewAdmins', label: 'View Admin', icon: 'people-outline' },
         { id: 'viewDirectors', label: 'View Directors', icon: 'people-outline' },
         { id: 'viewUsers', label: 'View Users', icon: 'people-outline' },
@@ -96,11 +105,33 @@ export default function Sidebar({
   };
 
   const handleSectionChange = (section: string) => {
-  console.log('🔔 DEBUG: Sidebar: handleSectionChange called with section:', section);
+    console.log('🔔 DEBUG: Sidebar: handleSectionChange called with section:', section);
     
     if (section === 'logout') {
       console.log('🔔 DEBUG: Sidebar: Handling logout...');
       handleLogout();
+      return;
+    }
+
+    // Navigate for specific actions that need separate screens
+    if (section === 'viewCompany') {
+      console.log('🔔 DEBUG: Sidebar: Navigating to view companies...');
+      router.push('/view-companies');
+      onClose();
+      return;
+    }
+
+    if (section === 'addCompany') {
+      console.log('🔔 DEBUG: Sidebar: Navigating to add company...');
+      router.push('/add-company');
+      onClose();
+      return;
+    }
+
+    if (section === 'addAdmin') {
+      console.log('🔔 DEBUG: Sidebar: Navigating to add user...');
+      router.push('/add-user');
+      onClose();
       return;
     }
 

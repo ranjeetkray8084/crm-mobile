@@ -12,6 +12,7 @@ import DashboardStats from './dashboard/DashboardStats';
 import NotificationsSection from './notifications/NotificationsSection';
 import UserSection from './users/UserSection';
 import AdminSection from './admins/AdminSection';
+import DirectorsSection from './directors/DirectorsSection';
 import AccountSection from './users/AccountSection';
 import Logo from "./common/Logo";
 
@@ -71,6 +72,8 @@ export default function Dashboard({
         return 'Users Management';
       case 'viewAdmins':
         return 'Admins Management';
+      case 'viewDirectors':
+        return 'Directors Management';
       case 'notifications':
         return 'Notifications';
       case 'addCompany':
@@ -93,6 +96,8 @@ export default function Dashboard({
         return 'Manage system users';
       case 'viewAdmins':
         return 'Manage admin users';
+      case 'viewDirectors':
+        return 'View all directors';
       case 'notifications':
         return 'View and manage notifications';
       case 'addCompany':
@@ -109,6 +114,9 @@ export default function Dashboard({
   };
 
   const renderSectionContent = () => {
+    // Role-based access control
+    const userRole = user?.role;
+    
     switch (activeSection) {
       case 'notifications':
         return (
@@ -118,42 +126,128 @@ export default function Dashboard({
         );
       case 'users':
       case 'viewUsers':
-        return <UserSection />;
+        // Only ADMIN, DIRECTOR, and DEVELOPER can access user management
+        if (userRole === 'ADMIN' || userRole === 'DIRECTOR' || userRole === 'DEVELOPER') {
+          return <UserSection />;
+        } else {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Access Denied</Text>
+                <Text style={styles.sectionDescription}>
+                  You don't have permission to access user management.
+                </Text>
+              </View>
+            </View>
+          );
+        }
       case 'viewAdmins':
-        return <AdminSection />;
+        // Only DIRECTOR and DEVELOPER can access admin management
+        if (userRole === 'DIRECTOR' || userRole === 'DEVELOPER') {
+          return <AdminSection />;
+        } else {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Access Denied</Text>
+                <Text style={styles.sectionDescription}>
+                  You don't have permission to access admin management.
+                </Text>
+              </View>
+            </View>
+          );
+        }
+      case 'viewDirectors':
+        // Only DEVELOPER can access director management
+        if (userRole === 'DEVELOPER') {
+          return <DirectorsSection />;
+        } else {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Access Denied</Text>
+                <Text style={styles.sectionDescription}>
+                  You don't have permission to access director management.
+                </Text>
+              </View>
+            </View>
+          );
+        }
       case 'addCompany':
-        return (
-          <View style={styles.dashboardSections}>
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Add Company</Text>
-              <Text style={styles.sectionDescription}>
-                This section will contain the form to add a new company.
-              </Text>
+        // Only DEVELOPER can add companies
+        if (userRole === 'DEVELOPER') {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Add Company</Text>
+                <Text style={styles.sectionDescription}>
+                  This section will contain the form to add a new company.
+                </Text>
+              </View>
             </View>
-          </View>
-        );
+          );
+        } else {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Access Denied</Text>
+                <Text style={styles.sectionDescription}>
+                  You don't have permission to add companies.
+                </Text>
+              </View>
+            </View>
+          );
+        }
       case 'viewCompany':
-        return (
-          <View style={styles.dashboardSections}>
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>View Company</Text>
-              <Text style={styles.sectionDescription}>
-                This section will display company information and details.
-              </Text>
+        // Only DEVELOPER can view all companies
+        if (userRole === 'DEVELOPER') {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>View Company</Text>
+                <Text style={styles.sectionDescription}>
+                  This section will display company information and details.
+                </Text>
+              </View>
             </View>
-          </View>
-        );
+          );
+        } else {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Access Denied</Text>
+                <Text style={styles.sectionDescription}>
+                  You don't have permission to view company management.
+                </Text>
+              </View>
+            </View>
+          );
+        }
       case 'addAdmin':
-        return (
-          <View style={styles.dashboardSections}>
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Add Admin / Users</Text>
-              <Text style={styles.sectionDescription}>
-                This section will contain the form to add new admin users or regular users.
-              </Text>
+        // Only DEVELOPER can add admins
+        if (userRole === 'DEVELOPER') {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Add Admin / Users</Text>
+                <Text style={styles.sectionDescription}>
+                  This section will contain the form to add new admin users or regular users.
+                </Text>
+              </View>
             </View>
-          </View>
-        );
+          );
+        } else {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Access Denied</Text>
+                <Text style={styles.sectionDescription}>
+                  You don't have permission to add admins or users.
+                </Text>
+              </View>
+            </View>
+          );
+        }
       case 'account':
         return <AccountSection />;
       default:

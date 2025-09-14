@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import LeadActions from './LeadActions';
+import PhoneNumber from '../common/PhoneNumber';
 
 interface Lead {
   id?: string;
@@ -236,7 +237,10 @@ const LeadDetails: React.FC<LeadDetailsProps> = ({
             <View style={styles.infoRow}>
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Phone</Text>
-                <Text style={styles.infoValue}>{lead.phone?.trim() || 'N/A'}</Text>
+                <PhoneNumber 
+                  phoneNumber={lead.phone?.trim() || 'N/A'} 
+                  textStyle={styles.infoValue}
+                />
               </View>
               <View style={styles.infoItem}>
                 <Text style={styles.infoLabel}>Email</Text>

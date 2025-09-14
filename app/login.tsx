@@ -30,6 +30,7 @@ export default function LoginScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [backendMessage, setBackendMessage] = useState('');
+  const [forgotPasswordStep, setForgotPasswordStep] = useState('email'); // 'email', 'otp', 'password'
 
   const router = useRouter();
   const { login, sendOtp, verifyOtp, resetPasswordWithOtp } = useAuth();
@@ -150,7 +151,7 @@ export default function LoginScreen() {
       
       if (result.success) {
         Alert.alert('Success', 'OTP sent to your email');
-        setShowForgotPassword(true);
+        setForgotPasswordStep('otp');
       } else {
         Alert.alert('Error', result.error || 'Failed to send OTP');
       }
@@ -173,7 +174,7 @@ export default function LoginScreen() {
       
       if (result.success && result.valid) {
         Alert.alert('Success', 'OTP verified! Please enter new password');
-        setShowForgotPassword(false);
+        setForgotPasswordStep('password');
       } else {
         Alert.alert('Error', result.error || 'Invalid OTP');
       }
@@ -207,6 +208,7 @@ export default function LoginScreen() {
       if (result.success) {
         Alert.alert('Success', 'Password reset successfully! Please login with new password');
         setShowForgotPassword(false);
+        setForgotPasswordStep('email');
         setOtpEmail('');
         setOtp('');
         setNewPassword('');
@@ -328,7 +330,10 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => setShowForgotPassword(false)}
+        onPress={() => {
+          setShowForgotPassword(false);
+          setForgotPasswordStep('email');
+        }}
         style={styles.backToLogin}
       >
         <Text style={styles.backToLoginText}>Back to Login</Text>
@@ -366,7 +371,17 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => setShowForgotPassword(false)}
+        onPress={() => setForgotPasswordStep('email')}
+        style={styles.backToLogin}
+      >
+        <Text style={styles.backToLoginText}>Back to Email</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => {
+          setShowForgotPassword(false);
+          setForgotPasswordStep('email');
+        }}
         style={styles.backToLogin}
       >
         <Text style={styles.backToLoginText}>Back to Login</Text>
@@ -416,7 +431,17 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => setShowForgotPassword(false)}
+        onPress={() => setForgotPasswordStep('otp')}
+        style={styles.backToLogin}
+      >
+        <Text style={styles.backToLoginText}>Back to OTP</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => {
+          setShowForgotPassword(false);
+          setForgotPasswordStep('email');
+        }}
         style={styles.backToLogin}
       >
         <Text style={styles.backToLoginText}>Back to Login</Text>
@@ -449,9 +474,9 @@ export default function LoginScreen() {
 
           {/* Form */}
           {!showForgotPassword && renderLoginForm()}
-          {showForgotPassword && !otp && !newPassword && renderForgotPasswordForm()}
-          {showForgotPassword && otp && !newPassword && renderOtpForm()}
-          {showForgotPassword && otp && newPassword && renderNewPasswordForm()}
+          {showForgotPassword && forgotPasswordStep === 'email' && renderForgotPasswordForm()}
+          {showForgotPassword && forgotPasswordStep === 'otp' && renderOtpForm()}
+          {showForgotPassword && forgotPasswordStep === 'password' && renderNewPasswordForm()}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

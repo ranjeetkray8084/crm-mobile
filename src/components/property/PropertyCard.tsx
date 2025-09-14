@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Share, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ThreeDotMenu from '../common/ThreeDotMenu';
 import StatusUpdateModal from '../common/StatusUpdateModal';
+import PhoneNumber from '../common/PhoneNumber';
 
 interface Property {
   id?: number;
@@ -35,7 +36,6 @@ interface Property {
 interface PropertyCardProps {
   property: Property;
   onStatusChange?: (propertyId: number, newStatus: string) => void;
-  onDelete?: (propertyId: number) => void;
   onUpdate?: (property: Property) => void;
   onAddRemark?: (property: Property) => void;
   onViewRemarks?: (property: Property) => void;
@@ -46,7 +46,6 @@ interface PropertyCardProps {
 const PropertyCard: React.FC<PropertyCardProps> = ({
   property,
   onStatusChange,
-  onDelete,
   onUpdate,
   onAddRemark,
   onViewRemarks,
@@ -64,6 +63,20 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       currency: 'INR',
       maximumFractionDigits: 0
     }).format(price);
+  };
+
+  const formatPricePerSqft = (price: number, size: string) => {
+    if (!price || !size) return 'N/A';
+    
+    // Extract numeric value from size string (e.g., "2040" from "2040 sqft")
+    const sizeMatch = size.match(/(\d+)/);
+    if (!sizeMatch) return 'N/A';
+    
+    const sizeInSqft = parseInt(sizeMatch[1]);
+    if (sizeInSqft === 0) return 'N/A';
+    
+    const pricePerSqft = Math.round(price / sizeInSqft);
+    return `₹${pricePerSqft.toLocaleString()}/sqft`;
   };
 
   const formatDate = (dateString: string) => {
@@ -125,16 +138,54 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       label: 'View Remarks',
       icon: <Ionicons name="eye" size={14} color="#6b7280" />,
       onClick: () => onViewRemarks?.(property)
-    },
-    {
-      label: 'Delete Property',
-      icon: <Ionicons name="trash" size={14} color="#6b7280" />,
-      onClick: () => propertyId && onDelete?.(propertyId),
-      danger: true
     }
   ];
 
   const statusStyle = getStatusColor(property.status || '');
+
+  const handleShare = async () => {
+    try {
+      const shareData = {
+        title: 'Property Details',
+        message: formatPropertyDataForShare(property),
+        url: '', // You can add a URL if needed
+      };
+
+      const result = await Share.share(shareData);
+      
+      if (result.action === Share.sharedAction) {
+        console.log('Property shared successfully');
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed');
+      }
+    } catch (error) {
+      console.error('Error sharing property:', error);
+      Alert.alert('Error', 'Failed to share property details');
+    }
+  };
+
+  const formatPropertyDataForShare = (property: Property) => {
+    const propertyName = property.propertyName || property.name || 'Unnamed Property';
+    const location = property.location || 'N/A';
+    const type = property.type || 'N/A';
+    const bhk = property.bhk ? `${property.bhk} BHK` : 'N/A';
+    const price = property.price ? `₹${property.price.toLocaleString('en-IN')}` : 'N/A';
+    const size = property.size || 'N/A';
+    const source = property.source || 'N/A';
+    const status = getStatusLabel(property.status || '');
+
+    return `🏠 *${propertyName}*
+
+📍 Location: ${location}
+🏢 Type: ${type}
+🏠 BHK: ${bhk}
+💰 Price: ${price}
+📏 Size: ${size}
+📊 Source: ${source}
+📋 Status: ${status}
+
+Shared from CRM App`;
+  };
 
   return (
     <View style={styles.container}>
@@ -149,12 +200,23 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           </Text>
         </View>
         
-        {/* Three Dot Menu */}
-        <ThreeDotMenu
-          item={property}
-          actions={actions}
-          position="right-0"
-        />
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          {/* Share Button */}
+          <TouchableOpacity 
+            style={styles.shareButton} 
+            onPress={handleShare}
+          >
+            <Ionicons name="share-outline" size={20} color="#6b7280" />
+          </TouchableOpacity>
+          
+          {/* Three Dot Menu */}
+          <ThreeDotMenu
+            item={property}
+            actions={actions}
+            position="right-0"
+          />
+        </View>
       </View>
 
       {/* Property Details */}
@@ -174,10 +236,26 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Size</Text>
             <Text style={styles.detailValue}>{property.size || 'N/A'}</Text>
+            {property.size && property.price && (
+              <Text style={styles.pricePerSqftText}>
+                {formatPricePerSqft(property.price, property.size)}
+              </Text>
+            )}
           </View>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Price</Text>
             <Text style={styles.detailValue}>{formatPrice(property.price || 0)}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.detailRow}>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Floor</Text>
+            <Text style={styles.detailValue}>{property.floor || 'N/A'}</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Unit Details</Text>
+            <Text style={styles.detailValue}>{property.unitDetails || 'N/A'}</Text>
           </View>
         </View>
         
@@ -188,7 +266,10 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
           </View>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Contact</Text>
-            <Text style={styles.detailValue}>{property.ownerContact || property.ownerNumber || 'N/A'}</Text>
+            <PhoneNumber 
+              phoneNumber={property.ownerContact || property.ownerNumber || 'N/A'} 
+              textStyle={styles.detailValue}
+            />
           </View>
         </View>
         
@@ -197,10 +278,7 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
             <Text style={styles.detailLabel}>Source</Text>
             <Text style={styles.detailValue}>{property.source || 'N/A'}</Text>
           </View>
-          <View style={styles.detailItem}>
-            <Text style={styles.detailLabel}>Unit Details</Text>
-            <Text style={styles.detailValue}>{property.unitDetails || property.unit || 'N/A'}</Text>
-          </View>
+       
         </View>
       </View>
 
@@ -266,6 +344,18 @@ const styles = StyleSheet.create({
   propertyInfo: {
     flex: 1,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  shareButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
   propertyName: {
     fontSize: 18,
     fontWeight: '600',
@@ -296,6 +386,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#374151',
+  },
+  pricePerSqftText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#059669',
+    marginTop: 2,
   },
   statusContainer: {
     marginBottom: 12,

@@ -23,7 +23,7 @@ export default {
         NSAppTransportSecurity: {
           NSAllowsArbitraryLoads: true,
           NSExceptionDomains: {
-            "backend.leadstracker.in": {
+            "192.168.1.6": {
               NSExceptionAllowsInsecureHTTPLoads: false,
               NSExceptionMinimumTLSVersion: "1.2",
               NSExceptionRequiresForwardSecrecy: true,
@@ -40,6 +40,8 @@ export default {
         UIBackgroundModes: ["background-fetch"],
         NSUserNotificationAlertStyle: "alert",
         NSUserNotificationUsageDescription: "This app uses notifications to keep you updated about leads, tasks, and important announcements.",
+        NSPhotoLibraryUsageDescription: "This app needs access to save exported files to your device.",
+        NSDocumentsFolderUsageDescription: "This app needs access to save exported Excel files to your device.",
         CFBundleURLTypes: [
           {
             CFBundleURLName: "leadstracker",
@@ -66,12 +68,16 @@ export default {
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.RECEIVE_NOTIFICATIONS",
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.MANAGE_EXTERNAL_STORAGE",
+        "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION"
       ],
       useNextNotificationsApi: true,
       allowBackup: true,
       allowClearUserData: true,
-      googleServicesFile: "./android/app/google-services.json",
+      googleServicesFile: "./google-services.json",
       compileSdkVersion: 34,
       targetSdkVersion: 34,
       minSdkVersion: 24,
@@ -91,20 +97,52 @@ export default {
     plugins: [
       "expo-dev-client",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff",
+          "mode": "production",
+          "androidMode": "default",
+          "androidCollapsedTitle": "New Notification",
+          "androidChannelId": "default",
+          "androidChannelName": "Default",
+          "androidChannelDescription": "Default notification channel for leads, tasks, and announcements",
+          "androidChannelImportance": "max",
+          "androidShowBadge": true,
+          "androidVibrate": true,
+          "androidSound": true,
+          "androidColor": "#FF231F7C",
+          "androidSticky": false,
+          "androidPriority": "max",
+          "iosDisplayInForeground": true,
+          "iosSound": "default",
+          "iosBadge": true,
+          "iosCritical": false
+        }
+      ],
+      [
         "@react-native-firebase/app",
         {
           "android_package_name": "com.ranjeet1620.crmnativeexpo",
-          "google_services_file": "./android/app/google-services.json"
+          "google_services_file": "./google-services.json"
         }
       ],
       [
         "@react-native-firebase/messaging",
         {
           "android_package_name": "com.ranjeet1620.crmnativeexpo",
-          "google_services_file": "./android/app/google-services.json"
+          "google_services_file": "./google-services.json"
         }
       ],
-      "expo-router"
+      "expo-router",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to save exported files.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save exported files to your photo library.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
     ]
   }
 };

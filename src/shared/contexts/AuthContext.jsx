@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthService } from '../../core/services/auth.service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext();
 
@@ -32,6 +33,7 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [isReady, setIsReady] = useState(false);
 
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -56,6 +58,19 @@ export const AuthProvider = ({ children }) => {
           setUser(currentUser);
           setIsAuthenticated(true);
           console.log('🔧 AuthProvider: User authenticated from stored credentials');
+
+          // Ensure notification setup also runs on cold start if not done
+          try {
+            const setupDone = await AsyncStorage.getItem('notificationSetupComplete');
+            if (setupDone !== 'true') {
+              console.log('🔔 SIMPLE: Notification setup not complete on startup, initiating...');
+              setTimeout(async () => {
+                await checkAndShowNotificationPrompt(currentUser);
+              }, 1000);
+            }
+          } catch (e) {
+            console.warn('🔔 SIMPLE: Could not read notification setup flag:', e);
+          }
         } else {
           setUser(null);
           setIsAuthenticated(false);
@@ -113,6 +128,11 @@ export const AuthProvider = ({ children }) => {
             
             console.log('🔧 AuthProvider: User authenticated successfully:', userData);
             
+            // Check if we should show notification permission prompt
+            setTimeout(async () => {
+              await checkAndShowNotificationPrompt(userData);
+            }, 2000);
+            
             return { success: true, user: userData, message: result.message || 'Login successful' };
           } catch (sessionError) {
             console.error('🔧 AuthProvider: Failed to save session:', sessionError);
@@ -147,16 +167,34 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log('🔧 AuthProvider: Logging out...');
+      console.log('🔧 SIMPLE: Logging out...');
       setError(null);
       
+      // Deactivate push token before logout
+      if (user && user.id) {
+        try {
+          console.log('🔔 SIMPLE: Deactivating push token for current device...');
+          const SimpleTokenService = (await import('../../core/services/SimpleTokenService')).default;
+          const tokenService = SimpleTokenService.getInstance();
+          
+          await tokenService.deactivateCurrentDevice();
+          console.log('✅ SIMPLE: Push token deactivated');
+        } catch (tokenError) {
+          console.warn('⚠️ SIMPLE: Failed to deactivate push token:', tokenError);
+        }
+      }
+      
+      // Clear notification setup
+      await AsyncStorage.removeItem('notificationSetupComplete');
+      
+      // Call auth service logout
       await AuthService.logout();
     } catch (error) {
-      console.warn('🔧 Logout error:', error);
+      console.warn('🔧 SIMPLE: Logout error:', error);
       setError(error.message || 'Logout failed');
     } finally {
       // Always clear local state regardless of API call result
-      console.log('🔧 AuthProvider: Clearing local auth state');
+      console.log('🔧 SIMPLE: Clearing local auth state');
       setUser(null);
       setIsAuthenticated(false);
     }
@@ -205,6 +243,62 @@ export const AuthProvider = ({ children }) => {
       console.error('🔧 Failed to reset password:', error);
       setError(error.message || 'Failed to reset password');
       return { success: false, error: error.message || 'Failed to reset password' };
+    }
+  };
+
+  const checkAndShowNotificationPrompt = async (userData) => {
+    try {
+      console.log('🔔 SIMPLE: Setting up notifications for user:', userData.email);
+      
+      // Import notification service and simple token service
+      const NotificationService = (await import('../../core/services/NotificationService')).default;
+      const SimpleTokenService = (await import('../../core/services/SimpleTokenService')).default;
+      
+      const notificationService = NotificationService.getInstance();
+      const tokenService = SimpleTokenService.getInstance();
+      
+      // Check if notifications are supported (not in Expo Go)
+      if (!notificationService.isFullySupported()) {
+        console.log('⚠️ SIMPLE: Notifications not supported in current environment (Expo Go)');
+        return;
+      }
+      
+      // Simple approach: Always try to setup notifications on login
+      console.log('🔔 SIMPLE: Requesting notification permission...');
+      
+      // Request permission
+      const permissionGranted = await notificationService.requestPermissions();
+      
+      if (permissionGranted) {
+        console.log('✅ SIMPLE: Notification permission granted');
+        
+        // Generate push token
+        const pushToken = await notificationService.getPushToken();
+
+        if (!pushToken) {
+          console.log('⚠️ SIMPLE: No real Expo token (likely Expo Go). Skipping registration.');
+          return;
+        }
+
+        const resolvedUserId = userData?.userId ?? userData?.id;
+        if (resolvedUserId) {
+          console.log('🔔 SIMPLE: Registering push token with backend for userId:', resolvedUserId);
+          
+          const result = await tokenService.registerToken(resolvedUserId, pushToken);
+          
+          if (result.success) {
+            console.log('✅ SIMPLE: Push token registered successfully');
+            await AsyncStorage.setItem('notificationSetupComplete', 'true');
+          } else {
+            console.error('❌ SIMPLE: Failed to register push token:', result.error);
+          }
+        }
+      } else {
+        console.log('🔕 SIMPLE: Notification permission denied');
+        await AsyncStorage.setItem('notificationSetupComplete', 'false');
+      }
+    } catch (error) {
+      console.error('❌ SIMPLE: Error setting up notifications:', error);
     }
   };
 

@@ -2,9 +2,12 @@ import { Stack } from "expo-router";
 import { AuthProvider } from "../src/shared/contexts/AuthContext";
 import { NotificationProvider } from "../src/shared/contexts/NotificationContext";
 import NotificationHandler from "../src/components/common/NotificationHandler";
+import { useEffect } from "react";
 
 export default function RootLayout() {
   console.log('🔔 DEBUG: RootLayout: Rendering...');
+
+  // Firebase initialization removed (simple push implementation)
 
   return (
     <NotificationProvider>
@@ -23,8 +26,7 @@ export default function RootLayout() {
           <Stack.Screen name="add-note" />
           <Stack.Screen name="add-task" />
           <Stack.Screen name="add-user" />
-          <Stack.Screen name="notification-test" />
-          <Stack.Screen name="push-test" />
+          {/* Test screens removed */}
           <Stack.Screen name="+not-found" />
         </Stack>
       </AuthProvider>

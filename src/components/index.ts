@@ -34,6 +34,9 @@ export { default as UserSection } from "./users/UserSection";
 // Admins
 export { default as AdminSection } from "./admins/AdminSection";
 
+// Directors
+export { default as DirectorsSection } from "./directors/DirectorsSection";
+
 // Tasks
 export { default as TaskCard } from "./tasks/TaskCard";
 export { default as TaskUploadForm } from "./tasks/TaskUploadForm";

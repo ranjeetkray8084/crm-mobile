@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ThreeDotMenu from './ThreeDotMenu';
+import PhoneNumber from './PhoneNumber';
 
 interface User {
   id?: string;
@@ -207,7 +208,10 @@ const UserCard: React.FC<UserCardProps> = ({
         {user.phone && (
           <View style={styles.detailRow}>
             <Ionicons name="call" size={16} color="#6b7280" />
-            <Text style={styles.detailText}>{user.phone}</Text>
+            <PhoneNumber 
+              phoneNumber={user.phone} 
+              textStyle={styles.detailText}
+            />
           </View>
         )}
         

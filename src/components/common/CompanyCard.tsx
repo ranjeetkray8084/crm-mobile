@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import PhoneNumber from './PhoneNumber';
 
 interface Company {
   id?: number;
@@ -29,6 +30,7 @@ interface CompanyCardProps {
   onUpdate?: (company: Company) => void;
   onRevoke?: (companyId: number) => void;
   onUnrevoke?: (companyId: number) => void;
+  onView?: (company: Company) => void;
   role?: string;
   companyId?: number;
 }
@@ -40,6 +42,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   onUpdate,
   onRevoke,
   onUnrevoke,
+  onView,
   role,
   companyId
 }) => {
@@ -170,7 +173,10 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
         {company.phone && (
           <View style={styles.detailRow}>
             <Ionicons name="call" size={16} color="#6b7280" />
-            <Text style={styles.detailText}>{company.phone}</Text>
+            <PhoneNumber 
+              phoneNumber={company.phone} 
+              textStyle={styles.detailText}
+            />
           </View>
         )}
         
@@ -219,6 +225,20 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
+        {onView && (
+          <TouchableOpacity style={styles.actionButton} onPress={() => onView(company)}>
+            <Ionicons name="eye" size={16} color="#3b82f6" />
+            <Text style={styles.actionButtonText}>View</Text>
+          </TouchableOpacity>
+        )}
+        
+        {onUpdate && (
+          <TouchableOpacity style={styles.actionButton} onPress={() => onUpdate(company)}>
+            <Ionicons name="create" size={16} color="#f59e0b" />
+            <Text style={styles.actionButtonText}>Edit</Text>
+          </TouchableOpacity>
+        )}
+        
         {onStatusChange && (
           <TouchableOpacity style={styles.actionButton} onPress={handleStatusChange}>
             <Ionicons name="refresh" size={16} color="#10b981" />

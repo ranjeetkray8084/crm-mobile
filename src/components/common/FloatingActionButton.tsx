@@ -71,6 +71,12 @@ export default function FloatingActionButton({ onAddAction }: FloatingActionButt
           { id: 'Notes', label: 'Notes/Event', icon: 'document-text', color: '#8b5cf6' },
           { id: 'Task', label: 'Calling Data', icon: 'call', color: '#ef4444' },
         ];
+      case 'DEVELOPER':
+        return [
+          { id: 'Announcement', label: 'Announcement', icon: 'megaphone', color: '#f59e0b' },
+          { id: 'Company', label: 'Add Company', icon: 'business', color: '#1c69ff' },
+          { id: 'User', label: 'Add Admin/Users', icon: 'person-add', color: '#10b981' },
+        ];
       default:
         console.log('FloatingActionButton: Using default options for role:', userRole);
         return [

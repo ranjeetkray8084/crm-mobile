@@ -5,6 +5,9 @@ import { useAuth } from '../../shared/contexts/AuthContext';
 import { useDashboardStats } from '../../core/hooks/useDashboardStats';
 import { useDashboardEvents } from '../../core/hooks/useDashboardEvents';
 import { useTodayFollowUps } from '../../core/hooks/useTodayFollowUps';
+import { getApiBaseUrl } from '../../core/config/api.config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import SimpleTokenService from '../../core/services/SimpleTokenService';
 
 const DashboardStats = () => {
   const { user } = useAuth();
@@ -25,6 +28,10 @@ const DashboardStats = () => {
       totalLeads: stats?.totalLeads,
       newLeads: stats?.newLeads,
       contactedLeads: stats?.contactedLeads,
+      totalCompanies: stats?.totalCompanies,
+      totalUsers: stats?.totalUsers,
+      totalAdmins: stats?.totalAdmins,
+      totalDirectors: stats?.totalDirectors,
     },
     loading,
     error
@@ -61,6 +68,7 @@ const DashboardStats = () => {
       ]
     );
   };
+
 
   if (!user || !userId || !role) {
     return (
@@ -151,6 +159,8 @@ const DashboardStats = () => {
             error={followUpsError}
             onPhoneNumberClick={handlePhoneNumberClick}
           />
+          
+          
        </View>
      </View>
    );
@@ -637,6 +647,8 @@ const UsersAdminsOverviewCard = ({ usersOverview }: {
     </View>
   );
 };
+
+
  
  const styles = StyleSheet.create({
   container: {

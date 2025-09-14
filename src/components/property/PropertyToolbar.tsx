@@ -81,6 +81,7 @@ const PropertyToolbar: React.FC<PropertyToolbarProps> = ({
             color="#6b7280" 
           />
         </TouchableOpacity>
+        
       </View>
 
       {/* Search Tags */}

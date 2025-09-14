@@ -126,36 +126,47 @@ const AdminSection: React.FC = () => {
 
   const renderAdminCard = (admin: Admin) => {
     const isActive = admin.status === 'active' || admin.status === true || admin.status === 1;
+    const isDeveloper = role === 'DEVELOPER';
 
     return (
       <View key={admin.userId} style={styles.adminCard}>
         <View style={styles.adminCardHeader}>
           <Text style={styles.adminName}>{admin.name}</Text>
-          <ThreeDotMenu
-            item={admin}
-            actions={[
-              {
-                label: 'Update Admin',
-                icon: <Ionicons name="create-outline" size={14} color="#3B82F6" />,
-                onClick: () => setSelectedAdmin(admin)
-              },
-              isActive
-                ? {
-                  label: 'Deactivate',
-                  icon: <Ionicons name="shield-checkmark-outline" size={14} color="#EF4444" />,
-                  onClick: () => handleRevokeAdmin(admin.userId),
-                  danger: true
-                }
-                : {
-                  label: 'Activate',
-                  icon: <Ionicons name="shield-outline" size={14} color="#10B981" />,
-                  onClick: () => handleActivateAdmin(admin.userId)
-                }
-            ]}
-          />
+          {isDeveloper ? (
+            <Text style={styles.viewOnlyText}>View Only</Text>
+          ) : (
+            <ThreeDotMenu
+              item={admin}
+              actions={[
+                {
+                  label: 'Update Admin',
+                  icon: <Ionicons name="create-outline" size={14} color="#3B82F6" />,
+                  onClick: () => setSelectedAdmin(admin)
+                },
+                isActive
+                  ? {
+                    label: 'Deactivate',
+                    icon: <Ionicons name="shield-checkmark-outline" size={14} color="#EF4444" />,
+                    onClick: () => handleRevokeAdmin(admin.userId),
+                    danger: true
+                  }
+                  : {
+                    label: 'Activate',
+                    icon: <Ionicons name="shield-outline" size={14} color="#10B981" />,
+                    onClick: () => handleActivateAdmin(admin.userId)
+                  }
+              ]}
+            />
+          )}
         </View>
         
         <View style={styles.adminDetails}>
+          {isDeveloper && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>ID:</Text>
+              <Text style={styles.detailValue}>{admin.userId}</Text>
+            </View>
+          )}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Email:</Text>
             <Text style={styles.detailValue}>{admin.email}</Text>
@@ -164,12 +175,12 @@ const AdminSection: React.FC = () => {
             <Text style={styles.detailLabel}>Phone:</Text>
             <Text style={styles.detailValue}>{admin.phone}</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Role:</Text>
-            <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>ADMIN</Text>
+          {isDeveloper && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Company:</Text>
+              <Text style={styles.detailValue}>{admin.company?.name || admin.companyName || 'No Company'}</Text>
             </View>
-          </View>
+          )}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Status:</Text>
             <View style={[
@@ -403,6 +414,11 @@ const styles = StyleSheet.create({
   },
   inactiveStatusText: {
     color: '#991B1B',
+  },
+  viewOnlyText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
 });
 

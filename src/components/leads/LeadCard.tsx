@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ThreeDotMenu from '../common/ThreeDotMenu';
 import StatusUpdateModal from '../common/StatusUpdateModal';
+import PhoneNumber from '../common/PhoneNumber';
 import { Lead } from '../../types/lead';
 
 interface LeadCardProps {
   lead: Lead;
   onStatusUpdate: (leadId: string, status: string) => void;
-  onDelete: (leadId: string) => void;
   onAssign: (leadId: string) => void;
   onUnassign: (leadId: string) => void;
   onUpdate: (lead: Lead) => void;
@@ -22,7 +22,6 @@ interface LeadCardProps {
 const LeadCard: React.FC<LeadCardProps> = ({
   lead,
   onStatusUpdate,
-  onDelete,
   onAssign,
   onUnassign,
   onUpdate,
@@ -191,16 +190,36 @@ const LeadCard: React.FC<LeadCardProps> = ({
       label: 'Assign',
       icon: <Ionicons name="person-add" size={14} color="#6b7280" />,
       onClick: () => onAssign(leadId)
-    }]),
-    {
-      label: 'Delete Lead',
-      icon: <Ionicons name="trash" size={14} color="#6b7280" />,
-      onClick: () => onDelete(leadId),
-      danger: true
-    }
+    }])
   ];
 
   const statusStyle = getStatusColor(lead.status);
+
+  const handleWhatsApp = () => {
+    if (!lead.phone || lead.phone === 'N/A') {
+      Alert.alert('No Phone Number', 'This lead does not have a phone number for WhatsApp.');
+      return;
+    }
+
+    // Clean the phone number (remove spaces, dashes, etc.)
+    const cleanPhone = lead.phone.replace(/\D/g, '');
+    
+    // Add country code if not present (assuming India +91)
+    const phoneWithCountryCode = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+    
+    const whatsappUrl = `whatsapp://send?phone=${phoneWithCountryCode}`;
+    
+    Linking.canOpenURL(whatsappUrl).then(supported => {
+      if (supported) {
+        Linking.openURL(whatsappUrl);
+      } else {
+        Alert.alert('WhatsApp Not Available', 'WhatsApp is not installed on this device.');
+      }
+    }).catch(err => {
+      console.error('Error opening WhatsApp:', err);
+      Alert.alert('Error', 'Unable to open WhatsApp. Please try again.');
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -215,12 +234,22 @@ const LeadCard: React.FC<LeadCardProps> = ({
           </Text>
         </View>
         
-        {/* Three Dot Menu */}
-        <ThreeDotMenu
-          item={lead}
-          actions={actions}
-          position="right-0"
-        />
+        {/* Action Buttons */}
+        <View style={styles.actionButtons}>
+          {/* WhatsApp Button */}
+          <TouchableOpacity 
+            style={styles.whatsappButton} 
+            onPress={handleWhatsApp}
+          >
+            <Ionicons name="logo-whatsapp" size={20} color="#25d366" />
+          </TouchableOpacity>
+          
+          {/* Three Dot Menu */}
+          <ThreeDotMenu
+            item={lead}
+            actions={actions}
+          />
+        </View>
       </View>
 
       {/* Lead Details */}
@@ -228,7 +257,10 @@ const LeadCard: React.FC<LeadCardProps> = ({
         <View style={styles.detailRow}>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Phone</Text>
-            <Text style={styles.detailValue}>{(lead.phone && typeof lead.phone === 'string' && lead.phone.trim()) || 'N/A'}</Text>
+            <PhoneNumber 
+              phoneNumber={(lead.phone && typeof lead.phone === 'string' && lead.phone.trim()) || 'N/A'} 
+              textStyle={styles.detailValue}
+            />
           </View>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>Budget</Text>
@@ -314,6 +346,18 @@ const styles = StyleSheet.create({
   },
   leadInfo: {
     flex: 1,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  whatsappButton: {
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
   },
   leadName: {
     fontSize: 18,

@@ -76,20 +76,32 @@ const AccountSection: React.FC = () => {
 
   const fetchAvatar = async (userId: string) => {
     try {
-      console.log('🔧 Fetching avatar for user:', userId);
+      console.log('🔧 AccountSection: Fetching avatar for user:', userId);
       
+      // First check if user has avatar filename from login response
+      if (user?.avatar && user.avatar !== 'null' && user.avatar !== '') {
+        console.log('🔧 AccountSection: User has avatar filename:', user.avatar);
+        // Construct full avatar URL
+        const baseURL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://backend.leadstracker.in';
+        const avatarUrl = `${baseURL}/api/users/${userId}/avatar`;
+        console.log('🔧 AccountSection: Constructed avatar URL:', avatarUrl);
+        setAvatarUrl(avatarUrl);
+        return;
+      }
+      
+      // Fallback: Try to get avatar from API
       const result = await UserService.getAvatar(Number(userId)) as ApiResponse;
-      console.log('🔧 Avatar API result:', result);
+      console.log('🔧 AccountSection: Avatar API result:', result);
       
       if (result.success && result.data) {
-        console.log('🔧 Found avatar from API:', result.data);
+        console.log('🔧 AccountSection: Found avatar from API:', result.data);
         setAvatarUrl(result.data);
       } else {
-        console.log('🔧 No avatar found from API, using default');
+        console.log('🔧 AccountSection: No avatar found from API, using default');
         setAvatarUrl('');
       }
     } catch (error) {
-      console.error('🔧 Error fetching avatar:', error);
+      console.error('🔧 AccountSection: Error fetching avatar:', error);
       setAvatarUrl('');
     }
   };

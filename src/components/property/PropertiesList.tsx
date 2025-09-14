@@ -37,7 +37,6 @@ interface PropertiesListProps {
   error: string | null;
   onRefresh: () => void;
   onStatusChange?: (propertyId: number, newStatus: string) => void;
-  onDelete?: (propertyId: number) => void;
   onUpdate?: (property: Property) => void;
   onAddRemark?: (property: Property) => void;
   onViewRemarks?: (property: Property) => void;
@@ -59,7 +58,6 @@ const PropertiesList: React.FC<PropertiesListProps> = ({
   error,
   onRefresh,
   onStatusChange,
-  onDelete,
   onUpdate,
   onAddRemark,
   onViewRemarks,
@@ -73,7 +71,6 @@ const PropertiesList: React.FC<PropertiesListProps> = ({
     <PropertyCard
       property={item}
       onStatusChange={onStatusChange}
-      onDelete={onDelete}
       onUpdate={onUpdate}
       onAddRemark={onAddRemark}
       onViewRemarks={onViewRemarks}

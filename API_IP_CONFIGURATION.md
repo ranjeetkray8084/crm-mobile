@@ -88,8 +88,8 @@ export API_BASE_URL=https://backend.leadstracker.in
 - Your phone and computer must be on the same WiFi network
 - Both devices should be connected to the same router
 
-### **Port 8082**
-- Your backend server must be running on port 8082
+### **Port 8083**
+- Your backend server must be running on port 8083
 - Make sure no firewall is blocking the connection
 
 ### **Network Access**
@@ -101,8 +101,8 @@ export API_BASE_URL=https://backend.leadstracker.in
 ### **1. Check Backend Status**
 Make sure your Spring Boot backend is running:
 ```bash
-# Check if port 8082 is listening
-netstat -an | grep 8082
+# Check if port 8083 is listening
+netstat -an | grep 8083
 ```
 
 ### **2. Test from Phone**
@@ -123,9 +123,9 @@ Look for these log messages:
 
 #### **1. Connection Refused**
 ```
-❌ Network Error: connect ECONNREFUSED backend.leadstracker.in:8082
+❌ Network Error: connect ECONNREFUSED backend.leadstracker.in:8083
 ```
-**Solution**: Check if backend is running on port 8082
+**Solution**: Check if backend is running on port 8083
 
 #### **2. Timeout Error**
 ```
@@ -153,7 +153,7 @@ Look for these log messages:
 
 3. **Test Port Access**
    ```bash
-   telnet backend.leadstracker.in 8082
+   telnet backend.leadstracker.in 8083
    ```
 
 4. **Restart Expo Server**
@@ -227,7 +227,7 @@ If you encounter issues:
 
 1. **Check Network**: Ensure both devices are on same network
 2. **Verify IP**: Use `ipconfig` or `ifconfig` to confirm IP
-3. **Test Backend**: Verify backend is running on port 8082
+3. **Test Backend**: Verify backend is running on port 8083
 4. **Check Logs**: Look for error messages in console
 5. **Restart Services**: Restart both backend and Expo server
 

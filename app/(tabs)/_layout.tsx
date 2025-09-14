@@ -6,20 +6,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AuthGuard from "../../src/components/AuthGuard";
 import FloatingActionButton from "../../src/components/common/FloatingActionButton";
 import { NotesProvider } from "../../src/shared/contexts/NotesContext";
+import { useAuth } from "../../src/shared/contexts/AuthContext";
 import { useCallback, useEffect } from "react";
 
 export default function TabsLayout() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
 
-  // Check if user is DEVELOPER role
-  const isDeveloper = false; // This will be removed as per the edit hint
+  // Get user role for conditional rendering
+  const userRole = user?.role;
+  const isDeveloper = userRole === 'DEVELOPER';
 
-  console.log('TabsLayout: User role:', false, 'isDeveloper:', isDeveloper); // This will be removed as per the edit hint
+  console.log('TabsLayout: User role:', userRole, 'isDeveloper:', isDeveloper);
 
   useEffect(() => {
-    console.log('TabsLayout: About to render tabs with isDeveloper:', isDeveloper); // This will be removed as per the edit hint
-  }, [isDeveloper]);
+    console.log('TabsLayout: About to render tabs with userRole:', userRole, 'isDeveloper:', isDeveloper);
+  }, [userRole, isDeveloper]);
 
   const handleLogout = async () => {
     // Logout will be handled by AuthGuard
@@ -54,6 +57,12 @@ export default function TabsLayout() {
           break;
         case 'User':
           router.push('/add-user');
+          break;
+        case 'Announcement':
+          router.push('/add-announcement');
+          break;
+        case 'Company':
+          router.push('/add-company');
           break;
         default:
           console.log('TabLayout: Unknown actionId:', actionId);
@@ -197,10 +206,8 @@ export default function TabsLayout() {
             />
           </Tabs>
           
-          {/* Floating Action Button - only show for non-DEVELOPER users */}
-          {!isDeveloper && (
-            <FloatingActionButton onAddAction={handleAddAction} />
-          )}
+          {/* Floating Action Button - show for all users with role-based options */}
+          <FloatingActionButton onAddAction={handleAddAction} />
         </View>
       </NotesProvider>
     </AuthGuard>

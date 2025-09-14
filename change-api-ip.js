@@ -16,7 +16,7 @@ function updateAppConfigIp(newIp) {
     let content = fs.readFileSync(configPath, 'utf8');
     
     // Update the IP address in app.config.js
-    const regex = /(apiBaseUrl:\s*process\.env\.API_BASE_URL\s*\|\|\s*'http:\/\/)([^']+)(:8082')/;
+    const regex = /(apiBaseUrl:\s*process\.env\.API_BASE_URL\s*\|\|\s*'http:\/\/)([^']+)(:8083')/;
     
     if (regex.test(content)) {
       content = content.replace(regex, `$1${newIp}$3`);
@@ -41,7 +41,7 @@ function updateApiConfigIp(newIp) {
     let content = fs.readFileSync(configPath, 'utf8');
     
     // Update the IP address in api.config.js
-    const regex = /(baseURL:\s*'http:\/\/)([^']+)(:8082')/;
+    const regex = /(baseURL:\s*'http:\/\/)([^']+)(:8083')/;
     
     if (regex.test(content)) {
       content = content.replace(regex, `$1${newIp}$3`);
@@ -64,7 +64,7 @@ function getCurrentIp() {
   
   try {
     const content = fs.readFileSync(configPath, 'utf8');
-    const regex = /(apiBaseUrl:\s*process\.env\.API_BASE_URL\s*\|\|\s*'http:\/\/)([^']+)(:8082')/;
+    const regex = /(apiBaseUrl:\s*process\.env\.API_BASE_URL\s*\|\|\s*'http:\/\/)([^']+)(:8083')/;
     const match = content.match(regex);
     
     if (match) {
@@ -154,11 +154,11 @@ function main() {
   if (appConfigUpdated || apiConfigUpdated) {
     console.log('');
     console.log('✅ API IP updated successfully!');
-    console.log(`🌐 New API URL: http://${newIp}:8082`);
+    console.log(`🌐 New API URL: http://${newIp}:8083`);
     console.log('');
     console.log('💡 Remember to:');
     console.log('  1. Restart your Expo development server');
-    console.log('  2. Make sure your backend is running on port 8082');
+    console.log('  2. Make sure your backend is running on port 8083');
     console.log('  3. Check that your phone and computer are on the same network');
   } else {
     console.log('❌ Failed to update API IP');

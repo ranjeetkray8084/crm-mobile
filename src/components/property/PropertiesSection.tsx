@@ -3,7 +3,10 @@ import { View, StyleSheet, Alert } from 'react-native';
 import { useProperties } from '../../core/hooks/useProperties';
 import { usePropertySearch } from '../../core/hooks/usePropertySearch';
 import { useUsers } from '../../core/hooks/useUsers';
-import { exportProperties } from '../../core/utils/excelExport';
+import { exportProperties, exportPropertiesWithRole, exportPropertiesWithRoleAndDownload, exportDataWithDynamicColumns } from '../../core/utils/excelExport';
+import { exportPropertiesSimple } from '../../core/utils/simpleExcelExport';
+import { exportPropertiesFromBackend } from '../../core/utils/backendExcelExport';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import PropertyToolbar from './PropertyToolbar';
 import PropertyFilters from './PropertyFilters';
 import PropertiesList from './PropertiesList';
@@ -47,7 +50,7 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
   
   // Properties hook
   const {
-    properties, loading, error, pagination, loadProperties, searchProperties, updateProperty, deleteProperty, addRemark, getRemarks
+    properties, loading, error, pagination, loadProperties, searchProperties, updateProperty, addRemark, getRemarks
   } = useProperties(companyId, userId, userRole);
 
   // Users hook for filters
@@ -125,27 +128,6 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
     }
   };
 
-  const handleDeleteProperty = (propertyId: number) => {
-    Alert.alert(
-      'Delete Property',
-      'Are you sure you want to delete this property?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive', 
-          onPress: async () => {
-            try {
-              await deleteProperty(propertyId);
-              handleRefresh();
-            } catch (error: any) {
-              Alert.alert('Error', `Failed to delete property: ${error.message}`);
-            }
-          }
-        }
-      ]
-    );
-  };
 
   const handleUpdateProperty = (property: any) => {
     setEditingProperty(property);
@@ -199,19 +181,68 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
   };
 
   const handleExport = async () => {
-    if (!properties || properties.length === 0) {
-      Alert.alert('Export', 'No properties to export');
-      return;
-    }
-    
     try {
-      Alert.alert('Export', 'Exporting properties...', [], { cancelable: false });
+      console.log('🚀 Starting export process...');
+      console.log('📊 Current properties in component:', properties.length);
       
-      const result = await exportProperties(properties);
+      const currentTime = new Date().toLocaleTimeString();
+      Alert.alert('Export', `Exporting properties... (${currentTime})`, [], { cancelable: false });
+      
+      // Get current user info
+      const userInfo = await AsyncStorage.getItem('user');
+      const userData = userInfo ? JSON.parse(userInfo) : null;
+      
+      if (!userData?.companyId) {
+        Alert.alert('Export Failed', 'Company ID not found');
+        return;
+      }
+      
+      // Prepare export parameters for backend
+      const exportParams = {
+        companyId: userData.companyId,
+        userRole: userRole,
+        userId: userId,
+      };
+      
+      // Add search/filter parameters if active
+      if (isSearchActive && activeSearchParams && Object.keys(activeSearchParams).length > 0) {
+        console.log('🔍 Adding filter params:', activeSearchParams);
+        
+        if (activeSearchParams.search) {
+          exportParams.keywords = [activeSearchParams.search];
+        }
+        if (activeSearchParams.status) {
+          exportParams.status = activeSearchParams.status;
+        }
+        if (activeSearchParams.type) {
+          exportParams.type = activeSearchParams.type;
+        }
+        if (activeSearchParams.bhk) {
+          exportParams.bhk = activeSearchParams.bhk;
+        }
+        if (activeSearchParams.budget) {
+          const budgetParts = activeSearchParams.budget.split('-');
+          if (budgetParts[0]) exportParams.minPrice = parseFloat(budgetParts[0]);
+          if (budgetParts[1]) exportParams.maxPrice = parseFloat(budgetParts[1]);
+        }
+        if (activeSearchParams.createdBy) {
+          exportParams.createdBy = activeSearchParams.createdBy;
+        }
+      }
+      
+      console.log('📤 Export params:', exportParams);
+      
+      // Use backend export
+      const result = await exportPropertiesFromBackend(exportParams);
+      
+      console.log('📤 Export result:', result);
       
       if (result.success) {
-        Alert.alert('Success', result.message);
+        console.log('✅ Export successful');
+        const completionTime = new Date().toLocaleTimeString();
+        Alert.alert('Success', `Export completed successfully! (${completionTime})`);
       } else {
+        console.log('❌ Export failed:', result.message);
         Alert.alert('Export Failed', result.message);
       }
     } catch (error: any) {
@@ -231,7 +262,6 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
 
   const actionHandlers = {
     onStatusChange: handleStatusUpdate,
-    onDelete: handleDeleteProperty,
     onUpdate: handleUpdateProperty,
     onAddRemark: handleAddRemark,
     onViewRemarks: handleViewRemarks,
@@ -283,7 +313,6 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
         error={error}
         onRefresh={handleRefresh}
         onStatusChange={handleStatusUpdate}
-        onDelete={handleDeleteProperty}
         onUpdate={handleUpdateProperty}
         onAddRemark={handleAddRemark}
         onViewRemarks={handleViewRemarks}

@@ -17,7 +17,6 @@ interface Lead {
 interface LeadActionsProps {
   lead: Lead;
   onStatusUpdate: (leadId: string, status: string) => void;
-  onDelete: (leadId: string) => void;
   onAssign: (leadId: string) => void;
   onUnassign: (leadId: string) => void;
   onUpdate: (lead: Lead) => void;
@@ -34,7 +33,6 @@ interface LeadActionsProps {
 const LeadActions: React.FC<LeadActionsProps> = ({
   lead,
   onStatusUpdate,
-  onDelete,
   onAssign,
   onUnassign,
   onUpdate,
@@ -51,7 +49,6 @@ const LeadActions: React.FC<LeadActionsProps> = ({
   if (!leadId) return null;
 
   const isAssigned = Boolean(lead.assignedToSummary?.name?.trim() || lead.assignToName?.trim() === 'Assigned');
-  const canDelete = userRole === 'DIRECTOR' || userRole === 'ADMIN';
   const canAssign = userRole === 'DIRECTOR' || userRole === 'ADMIN';
 
   const getStatusColor = (status: string) => {
@@ -221,21 +218,6 @@ const LeadActions: React.FC<LeadActionsProps> = ({
         </View>
       )}
 
-      {/* Danger Actions */}
-      {canDelete && (
-        <View style={styles.actionSection}>
-          <Text style={styles.sectionTitle}>Danger Zone</Text>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.dangerButton]} 
-              onPress={() => onDelete(leadId)}
-            >
-              <Ionicons name="trash" size={20} color="#ef4444" />
-              <Text style={[styles.actionButtonText, styles.dangerButtonText]}>Delete Lead</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
     </View>
   );
 };

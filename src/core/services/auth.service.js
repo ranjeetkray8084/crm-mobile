@@ -43,7 +43,9 @@ export class AuthService {
         role: response.data.role,
         companyName: response.data.companyName,
         companyId: response.data.companyId,
-        img: response.data.avatar,
+        img: response.data.avatar, // Keep original avatar filename
+        avatar: response.data.avatar, // Also store as avatar field
+        token: token, // Store token in user object for authenticated requests
       };
 
       console.log('AuthService: Extracted user data:', user);

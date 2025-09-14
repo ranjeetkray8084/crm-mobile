@@ -8,6 +8,7 @@ export * from './lead.service';
 export * from './note.service';
 export * from './property.service';
 export { TaskService } from './task.service';
+export * from './announcement.service';
 export * from './contact.service';
 export * from './followup.service';
 export * from './notification.service';

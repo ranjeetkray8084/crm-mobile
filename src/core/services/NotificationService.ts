@@ -1,6 +1,5 @@
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import TokenRegistrationService from './TokenRegistrationService';
 import { getApiBaseUrl, API_ENDPOINTS } from '../config/api.config';
 
 // Import expo-notifications with error handling
@@ -24,16 +23,14 @@ class NotificationService {
   private isExpoGo: boolean;
   private isDevelopmentBuild: boolean;
   private notificationsAvailable: boolean;
-  private tokenRegistrationService: TokenRegistrationService | null;
   private notificationListener: any;
   private responseListener: any;
 
   constructor() {
     this.isExpoGo = Constants.appOwnership === 'expo';
-    this.isDevelopmentBuild = Constants.appOwnership === 'standalone';
+    this.isDevelopmentBuild = Constants.appOwnership !== 'expo';
     this.notificationsAvailable = !!(Notifications && !this.isExpoGo);
-    this.tokenRegistrationService = TokenRegistrationService.getInstance();
-    
+
     console.log('🔔 DEBUG: NotificationService constructor called');
     console.log('🔔 DEBUG: App ownership:', Constants.appOwnership);
     console.log('🔔 DEBUG: Is Expo Go:', this.isExpoGo);
@@ -57,7 +54,7 @@ class NotificationService {
     try {
       if (this.notificationsAvailable) {
         console.log('✅ DEBUG: Initializing with full functionality');
-        
+
         // Configure notification behavior for both foreground and background
         console.log('🔔 DEBUG: Setting notification handler...');
         Notifications.setNotificationHandler({
@@ -71,7 +68,10 @@ class NotificationService {
 
         // Set up background notification handling
         await this.setupBackgroundNotifications();
-        
+
+        // Set up Firebase foreground/background handlers
+        await this.setupFirebaseMessageHandlers();
+
       } else {
         console.log('⚠️ DEBUG: Running with limited functionality (Expo Go)');
       }
@@ -83,7 +83,7 @@ class NotificationService {
   private async setupBackgroundNotifications(): Promise<void> {
     try {
       console.log('🔔 DEBUG: Setting up background notifications...');
-      
+
       // Configure for background notifications
       await Notifications.setNotificationChannelAsync('default', {
         name: 'Default',
@@ -94,12 +94,12 @@ class NotificationService {
         enableVibrate: true,
         showBadge: true,
       });
-      
+
       console.log('✅ DEBUG: Background notification channel configured');
-      
+
       // Set up notification listeners
       await this.setupNotificationListeners();
-      
+
     } catch (error) {
       console.error('❌ DEBUG: Error setting up background notifications:', error);
     }
@@ -107,55 +107,9 @@ class NotificationService {
 
   private async setupNotificationListeners(): Promise<void> {
     try {
-      console.log('🔔 DEBUG: Setting up notification listeners...');
-      
-      // Set up Firebase messaging listeners (fallback)
-      try {
-        const messaging = await import('@react-native-firebase/messaging');
-        const messagingInstance = messaging.default();
-        
-        // Listen for foreground messages
-        const unsubscribeForeground = messagingInstance.onMessage(async (remoteMessage: any) => {
-          console.log('🔔 DEBUG: Firebase foreground message received:', remoteMessage);
-          
-          // Show local notification for foreground messages
-          if (remoteMessage.notification) {
-            await this.sendImmediateNotification({
-              title: remoteMessage.notification.title || 'New Notification',
-              body: remoteMessage.notification.body || 'You have a new message',
-              data: remoteMessage.data,
-              sound: true,
-              priority: 'high'
-            });
-          }
-        });
+      console.log('🔔 DEBUG: Setting up Expo notification listeners...');
 
-        // Listen for background messages
-        messagingInstance.setBackgroundMessageHandler(async (remoteMessage: any) => {
-          console.log('🔔 DEBUG: Firebase background message received:', remoteMessage);
-        });
-
-        // Listen for notification taps when app is in background
-        messagingInstance.onNotificationOpenedApp((remoteMessage: any) => {
-          console.log('🔔 DEBUG: Firebase notification opened app:', remoteMessage);
-          this.handleNotificationTap({ notification: { request: { content: { data: remoteMessage.data } } } });
-        });
-
-        // Check if app was opened from a notification
-        messagingInstance.getInitialNotification().then((remoteMessage: any) => {
-          if (remoteMessage) {
-            console.log('🔔 DEBUG: App opened from notification:', remoteMessage);
-            this.handleNotificationTap({ notification: { request: { content: { data: remoteMessage.data } } } });
-          }
-        });
-
-        console.log('✅ DEBUG: Firebase messaging listeners set up successfully');
-        
-      } catch (firebaseError) {
-        console.error('❌ DEBUG: Error setting up Firebase listeners:', firebaseError);
-      }
-      
-      // Set up Expo notification listeners (primary for Expo push notifications)
+      // Set up Expo notification listeners for push notifications
       const foregroundListener = Notifications.addNotificationReceivedListener((notification: any) => {
         console.log('🔔 DEBUG: Expo foreground notification received:', notification);
         console.log('🔔 DEBUG: Notification data:', notification.request.content.data);
@@ -172,11 +126,46 @@ class NotificationService {
       // Store listeners for cleanup
       this.notificationListener = foregroundListener;
       this.responseListener = responseListener;
-      
-      console.log('✅ DEBUG: All notification listeners set up successfully');
-      
+
+      console.log('✅ DEBUG: Expo notification listeners set up successfully');
+
     } catch (error) {
       console.error('❌ DEBUG: Error setting up notification listeners:', error);
+    }
+  }
+
+  private async setupFirebaseMessageHandlers(): Promise<void> {
+    try {
+      const messaging = require('@react-native-firebase/messaging').default;
+
+      messaging().onMessage(async (remoteMessage: any) => {
+        try {
+          const title = remoteMessage?.notification?.title ?? 'Notification';
+          const body = remoteMessage?.notification?.body ?? '';
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title,
+              body,
+              data: remoteMessage?.data,
+              sound: true,
+              priority: Notifications.AndroidImportance.MAX,
+            },
+            trigger: null,
+          });
+        } catch (e) {
+          console.log('⚠️ DEBUG: Error displaying foreground FCM notification', e);
+        }
+      });
+
+      try {
+        messaging().setBackgroundMessageHandler(async (_remoteMessage: any) => {
+          return;
+        });
+      } catch (e) {
+        console.log('⚠️ DEBUG: setBackgroundMessageHandler not available', (e as any)?.message || e);
+      }
+    } catch (e) {
+      console.log('⚠️ DEBUG: Firebase messaging not available, skipping FCM handlers');
     }
   }
 
@@ -185,18 +174,30 @@ class NotificationService {
       console.log('🔔 DEBUG: Handling notification tap...');
       const data = response.notification.request.content.data;
       console.log('🔔 DEBUG: Notification data:', data);
-      
+
       // Handle different notification types
-      if (data?.type === 'lead') {
-        console.log('🔔 DEBUG: Lead notification tapped, navigate to lead:', data.leadId);
-        // Navigate to lead details
-      } else if (data?.type === 'task') {
-        console.log('🔔 DEBUG: Task notification tapped, navigate to task:', data.taskId);
-        // Navigate to task details
-      } else if (data?.type === 'announcement') {
-        console.log('🔔 DEBUG: Announcement notification tapped:', data.announcementId);
-        // Show announcement
+      const { router } = require('expo-router');
+      const r = router;
+      if (!r || typeof r.push !== 'function') {
+        console.log('⚠️ DEBUG: Router not available while handling notification');
+        return;
       }
+
+      if (data?.type === 'lead' && data?.leadId) {
+        r.push(`/lead/${data.leadId}`);
+        return;
+      }
+      if (data?.type === 'task' && data?.taskId) {
+        r.push('/(tabs)/tasks');
+        return;
+      }
+      if (data?.type === 'announcement' && data?.announcementId) {
+        r.push('/(tabs)');
+        return;
+      }
+
+      // Default: open dashboard
+      r.push('/(tabs)');
     } catch (error) {
       console.error('❌ DEBUG: Error handling notification tap:', error);
     }
@@ -211,12 +212,9 @@ class NotificationService {
     try {
       const { status } = await Notifications.requestPermissionsAsync();
       console.log('NotificationContext: Permission status:', status);
-      
-      if (status === 'granted') {
-        // Auto-register token after permission granted
-        await this.autoRegisterToken();
-      }
-      
+
+      // Note: Token registration is handled by AuthContext after login
+
       return status === 'granted';
     } catch (error) {
       console.error('NotificationContext: Error requesting permissions:', error);
@@ -224,132 +222,64 @@ class NotificationService {
     }
   }
 
-  private async autoRegisterToken(): Promise<void> {
-    try {
-      console.log('🔔 DEBUG: Auto-registering token after permission granted...');
-      
-      // Get or generate push token
-      const token = await this.getPushToken();
-      if (token) {
-        // Register with backend
-        const result = await this.tokenRegistrationService?.registerToken(token);
-        if (result?.success) {
-          console.log('✅ DEBUG: Token auto-registered successfully');
-        } else {
-          console.error('❌ DEBUG: Token auto-registration failed:', result?.error);
-        }
-      }
-    } catch (error) {
-      console.error('❌ DEBUG: Error in auto-registration:', error);
-    }
-  }
+
 
   async getPushToken(): Promise<string | null> {
-    console.log('🔔 DEBUG: getPushToken() called');
-    console.log('🔔 DEBUG: notificationsAvailable:', this.notificationsAvailable);
-    
+    console.log('🔔 DEBUG: getPushToken() called - SIMPLE APPROACH');
+
     if (!this.notificationsAvailable) {
       console.log('⚠️ DEBUG: Cannot get push token - notifications not available in Expo Go');
       return null;
     }
 
     try {
-      console.log('🔔 DEBUG: Getting push token...');
-      
-      // Check if we already have a token
-      console.log('🔔 DEBUG: Checking for existing token...');
-      const existingToken = await this.tokenRegistrationService?.getCurrentToken();
-      console.log('🔔 DEBUG: Existing token check result:', !!existingToken, existingToken ? existingToken.substring(0, 20) + '...' : 'null');
-      
-      if (existingToken) {
-        console.log('✅ DEBUG: Using existing token:', existingToken.substring(0, 20) + '...');
-        return existingToken;
+      // Simple approach: Just get Expo push token
+      console.log('🔔 DEBUG: Getting simple Expo push token...');
+
+      // Request permissions first
+      const { status } = await Notifications.requestPermissionsAsync();
+      console.log('🔔 DEBUG: Permission status:', status);
+
+      if (status !== 'granted') {
+        console.log('⚠️ DEBUG: Notification permissions not granted');
+        return null;
       }
 
-      // Get real Expo push token
-      console.log('🔔 DEBUG: Getting real Expo push token...');
-      
+      // Prefer FCM token on Android via RN Firebase Messaging
       try {
-        // Request permissions first
-        const { status } = await Notifications.requestPermissionsAsync();
-        console.log('🔔 DEBUG: Permission status:', status);
-        
-        if (status !== 'granted') {
-          console.log('⚠️ DEBUG: Notification permissions not granted');
-          return null;
-        }
-
-        // Get Expo push token (primary method since backend is sending Expo notifications)
-        console.log('🔔 DEBUG: Getting Expo push token...');
-        
-        try {
-          const expoPushToken = await Notifications.getExpoPushTokenAsync({
-            projectId: '7b166f07-1eab-40be-8faf-4252befa0675', // Updated to match app.config.js
-            experienceId: '@ranjeet1620/crmnativeexpo'
-          });
-          
-          console.log('✅ DEBUG: Expo push token obtained:', expoPushToken.data.substring(0, 20) + '...');
-          console.log('✅ DEBUG: Full Expo token length:', expoPushToken.data.length);
-          console.log('🔔 DEBUG: Token type: Expo');
-          return expoPushToken.data;
-          
-        } catch (expoError: any) {
-          console.error('❌ DEBUG: Error getting Expo push token:', expoError);
-          console.error('❌ DEBUG: Expo error message:', expoError.message);
-          
-          // Fallback: Try Firebase FCM token
-          console.log('⚠️ DEBUG: Falling back to Firebase FCM token...');
-          try {
-            const messaging = await import('@react-native-firebase/messaging');
-            
-            const authStatus = await messaging.default().requestPermission();
-            console.log('🔔 DEBUG: FCM permission status:', authStatus);
-            
-            if (authStatus === messaging.default.AuthorizationStatus.AUTHORIZED || 
-                authStatus === messaging.default.AuthorizationStatus.PROVISIONAL) {
-              const fcmToken = await messaging.default().getToken();
-              console.log('✅ DEBUG: FCM token obtained:', fcmToken.substring(0, 20) + '...');
-              console.log('🔔 DEBUG: Token type: FCM');
-              return fcmToken;
-            } else {
-              console.log('⚠️ DEBUG: FCM permissions not granted');
-              return null;
-            }
-            
-          } catch (fcmError: any) {
-            console.error('❌ DEBUG: Error getting FCM token:', fcmError);
-            
-            // Final fallback: create simple token for testing
-            console.log('⚠️ DEBUG: Final fallback to simple token for testing...');
-            const simpleToken = `expo-simple-token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            console.log('✅ DEBUG: Simple token created as final fallback:', simpleToken.substring(0, 20) + '...');
-            return simpleToken;
+        const messaging = require('@react-native-firebase/messaging').default;
+        const authStatus = await messaging().requestPermission();
+        if (authStatus) {
+          const fcmToken = await messaging().getToken();
+          if (fcmToken) {
+            console.log('✅ DEBUG: FCM token obtained:', fcmToken.substring(0, 30) + '...');
+            return fcmToken;
           }
         }
-        
-      } catch (expoError: any) {
-        console.error('❌ DEBUG: Error getting Expo push token:', expoError);
-        console.error('❌ DEBUG: Expo error message:', expoError.message);
-        
-        // Fallback: create a simple token for testing
-        console.log('⚠️ DEBUG: Falling back to simple token for testing...');
-        const simpleToken = `expo-simple-token-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        console.log('✅ DEBUG: Simple token created as fallback:', simpleToken.substring(0, 20) + '...');
-        return simpleToken;
+      } catch (e) {
+        console.log('⚠️ DEBUG: FCM token not available, falling back to Expo token');
       }
-      
+
+      // Fallback to Expo token
+      const expoPushToken = await Notifications.getExpoPushTokenAsync();
+      if (expoPushToken?.data) {
+        console.log('✅ DEBUG: Expo token obtained:', expoPushToken.data.substring(0, 30) + '...');
+        return expoPushToken.data;
+      }
+      console.log('⚠️ DEBUG: No push token available');
+      return null;
+
     } catch (error: any) {
       console.error('❌ DEBUG: Error in getPushToken():', error);
-      console.error('❌ DEBUG: Error message:', error.message);
-      console.error('❌ DEBUG: Error stack:', error.stack);
+      // Do not register fake tokens
       return null;
     }
   }
 
-  
+
 
   async scheduleLocalNotification(
-    notification: NotificationData, 
+    notification: NotificationData,
     trigger?: any
   ): Promise<string> {
     if (!this.notificationsAvailable) {
@@ -378,14 +308,14 @@ class NotificationService {
   }
 
   async scheduleNotificationForDateTime(
-    notification: NotificationData, 
+    notification: NotificationData,
     date: Date
   ): Promise<string> {
     return this.scheduleLocalNotification(notification, { date });
   }
 
   async scheduleNotificationWithDelay(
-    notification: NotificationData, 
+    notification: NotificationData,
     seconds: number
   ): Promise<string> {
     return this.scheduleLocalNotification(notification, { seconds });
@@ -507,143 +437,62 @@ class NotificationService {
     return this.isDevelopmentBuild;
   }
 
-  // 🔔 PUSH NOTIFICATION TOKEN MANAGEMENT METHODS
-
-  /**
-   * Generate and register push token when user logs in
-   */
-  async onUserLogin(): Promise<string | null> {
+  // Simple token management - token registration is handled by SimpleTokenService in AuthContext
+  
+  // Method called by AuthService on user login
+  async onUserLogin(): Promise<void> {
+    console.log('🔔 DEBUG: NotificationService.onUserLogin() called');
     try {
-      console.log('🔔 DEBUG: NotificationService.onUserLogin() called');
+      // Initialize notification service
+      await this.initialize();
       
-      if (!this.notificationsAvailable) {
-        console.log('⚠️ DEBUG: Notifications not available, skipping token generation');
-        return null;
-      }
-
-      // Check if we already have a token
-      const existingToken = await AsyncStorage.getItem('pushToken');
-      if (existingToken) {
-        console.log('✅ DEBUG: Existing push token found, re-registering with backend');
-        await this.tokenRegistrationService?.registerToken(existingToken);
-        return existingToken;
-      }
-
-      // Generate new token
-      console.log('🔔 DEBUG: Generating new push token...');
-      const token = await Notifications.getExpoPushTokenAsync({
-        projectId: '7b166f07-1eab-40be-8faf-4252befa0675', // From your app.config.js
-      });
-
-      if (token.data) {
-        console.log('✅ DEBUG: Push token generated:', token.data.substring(0, 20) + '...');
-        
-        // Save token locally
-        await AsyncStorage.setItem('pushToken', token.data);
-        
-        // Register with backend
-        if (this.tokenRegistrationService) {
-          const success = await this.tokenRegistrationService.registerToken(token.data);
-          if (success) {
-            console.log('✅ DEBUG: Push token registered successfully with backend');
-          } else {
-            console.log('⚠️ DEBUG: Failed to register token with backend, will retry later');
-          }
+      // Request permissions and get push token
+      const permissionGranted = await this.requestPermissions();
+      if (permissionGranted) {
+        console.log('✅ DEBUG: Notification permissions granted on login');
+        const pushToken = await this.getPushToken();
+        if (pushToken) {
+          console.log('✅ DEBUG: Push token obtained on login:', pushToken.substring(0, 30) + '...');
+        } else {
+          console.log('⚠️ DEBUG: No push token available on login');
         }
-        
-        return token.data;
+      } else {
+        console.log('⚠️ DEBUG: Notification permissions not granted on login');
       }
-      
-      return null;
     } catch (error) {
-      console.error('❌ DEBUG: Error in onUserLogin:', error);
-      return null;
+      console.error('❌ DEBUG: Error in onUserLogin():', error);
+      // Don't throw error to avoid breaking login flow
     }
   }
 
-  /**
-   * Deactivate push token when user logs out
-   */
+  // Method called by AuthService on user logout
   async onUserLogout(): Promise<void> {
+    console.log('🔔 DEBUG: NotificationService.onUserLogout() called');
     try {
-      console.log('🔔 DEBUG: NotificationService.onUserLogout() called');
+      // Clean up notification listeners
+      if (this.notificationListener) {
+        this.notificationListener.remove();
+        this.notificationListener = null;
+        console.log('✅ DEBUG: Notification listener removed');
+      }
       
-      if (!this.notificationsAvailable) {
-        console.log('⚠️ DEBUG: Notifications not available, skipping token deactivation');
-        return;
+      if (this.responseListener) {
+        this.responseListener.remove();
+        this.responseListener = null;
+        console.log('✅ DEBUG: Response listener removed');
       }
-
-      // Get current token
-      const currentToken = await AsyncStorage.getItem('pushToken');
-      if (currentToken && this.tokenRegistrationService) {
-        console.log('🔔 DEBUG: Deactivating push token on backend...');
-        
-        try {
-          const authToken = await AsyncStorage.getItem('token');
-          if (authToken) {
-            const baseURL = getApiBaseUrl();
-            const response = await fetch(`${baseURL}${API_ENDPOINTS.PUSH_NOTIFICATIONS.LOGOUT}`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json',
-              },
-            });
-
-            if (response.ok) {
-              console.log('✅ DEBUG: Push token deactivated successfully on backend');
-            } else {
-              console.log('⚠️ DEBUG: Failed to deactivate token on backend:', response.status);
-            }
-          }
-        } catch (error) {
-          console.error('❌ DEBUG: Error deactivating token on backend:', error);
-        }
-      }
-
-      // Clear local token
-      await AsyncStorage.removeItem('pushToken');
-      console.log('✅ DEBUG: Local push token cleared');
+      
+      // Clear badge count
+      await this.setBadgeCount(0);
+      console.log('✅ DEBUG: Badge count cleared');
+      
+      // Cancel all scheduled notifications
+      await this.cancelAllNotifications();
+      console.log('✅ DEBUG: All notifications cancelled');
       
     } catch (error) {
-      console.error('❌ DEBUG: Error in onUserLogout:', error);
-    }
-  }
-
-  /**
-   * Get current push token
-   */
-  async getCurrentPushToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem('pushToken');
-    } catch (error) {
-      console.error('❌ DEBUG: Error getting current push token:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Check if push token is registered with backend
-   */
-  async isTokenRegistered(): Promise<boolean> {
-    try {
-      const token = await this.getCurrentPushToken();
-      if (!token) return false;
-
-      const authToken = await AsyncStorage.getItem('token');
-      if (!authToken) return false;
-
-      const baseURL = getApiBaseUrl();
-      const response = await fetch(`${baseURL}${API_ENDPOINTS.PUSH_NOTIFICATIONS.STATUS}`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-        },
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error('❌ DEBUG: Error checking token registration status:', error);
-      return false;
+      console.error('❌ DEBUG: Error in onUserLogout():', error);
+      // Don't throw error to avoid breaking logout flow
     }
   }
 }

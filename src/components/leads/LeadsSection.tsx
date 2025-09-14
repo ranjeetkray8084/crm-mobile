@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useLeads } from '../../core/hooks/useLeads';
 import { useLeadSearch } from '../../core/hooks/useLeadSearch';
 import { useUsers } from '../../core/hooks/useUsers';
-import { exportLeads } from '../../core/utils/excelExport';
+import { exportLeadsFromBackend } from '../../core/utils/backendExcelExport';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,7 +12,6 @@ import LeadToolbar from './LeadToolbar';
 import LeadFilters from './LeadFilters';
 import LeadsList from './LeadsList';
 import LeadsFeedback from './LeadsFeedback';
-import SearchResultsSummary from './SearchResultsSummary';
 import ConfirmModal from '../common/ConfirmModal';
 import AssignLeadModal from './modals/AssignLeadModal';
 import UpdateLeadModal from './modals/UpdateLeadModal';
@@ -295,20 +294,84 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
     setShowFilters(!showFilters);
   };
 
+
   const handleExport = async () => {
-    if (!leads || leads.length === 0) {
-      Alert.alert('Export', 'No leads to export');
-      return;
-    }
-    
     try {
-      Alert.alert('Export', 'Exporting leads...', [], { cancelable: false });
+      console.log('🚀 Starting export process...');
+      const currentTime = new Date().toLocaleTimeString();
+      Alert.alert('Export', `Exporting leads... (${currentTime})`, [], { cancelable: false });
       
-      const result = await exportLeads(leads);
+      // Get current user info
+      const userInfo = await AsyncStorage.getItem('user');
+      const userData = userInfo ? JSON.parse(userInfo) : null;
+      
+      console.log('👤 User data:', { 
+        hasUserData: !!userData, 
+        companyId: userData?.companyId,
+        userRole: userRole,
+        userId: userId 
+      });
+      
+      if (!userData?.companyId) {
+        console.error('❌ Company ID not found');
+        Alert.alert('Export Failed', 'Company ID not found');
+        return;
+      }
+      
+      // Prepare export parameters for backend
+      const exportParams = {
+        companyId: userData.companyId,
+        userRole: userRole,
+        userId: userId,
+      };
+      
+      // Add search/filter parameters if active
+      if (isSearchActive && activeSearchParams && Object.keys(activeSearchParams).length > 0) {
+        console.log('🔍 Adding filter params:', activeSearchParams);
+        
+        if (activeSearchParams.search) {
+          exportParams.keywords = [activeSearchParams.search];
+        }
+        if (activeSearchParams.status) {
+          exportParams.status = activeSearchParams.status;
+        }
+        if (activeSearchParams.source) {
+          exportParams.source = activeSearchParams.source;
+        }
+        if (activeSearchParams.createdBy) {
+          exportParams.createdBy = activeSearchParams.createdBy;
+        }
+        if (activeSearchParams.budget) {
+          const budgetParts = activeSearchParams.budget.split('-');
+          if (budgetParts[0]) exportParams.minBudget = parseFloat(budgetParts[0]);
+          if (budgetParts[1]) exportParams.maxBudget = parseFloat(budgetParts[1]);
+        }
+        
+        // Map assignedTo filter to action parameter
+        if (activeSearchParams.assignedTo) {
+          if (activeSearchParams.assignedTo === 'assigned') {
+            exportParams.action = 'ASSIGNED';
+          } else if (activeSearchParams.assignedTo === 'unassigned') {
+            exportParams.action = 'UNASSIGNED';
+          }
+        } else if (activeSearchParams.action) {
+          exportParams.action = activeSearchParams.action;
+        }
+      }
+      
+      console.log('📤 Export params:', exportParams);
+      
+      // Use backend export
+      const result = await exportLeadsFromBackend(exportParams);
+      
+      console.log('📤 Export result:', result);
       
       if (result.success) {
-        Alert.alert('Success', result.message);
+        console.log('✅ Export successful');
+        const completionTime = new Date().toLocaleTimeString();
+        Alert.alert('Success', `Export completed successfully! (${completionTime})`);
       } else {
+        console.log('❌ Export failed:', result.message);
         Alert.alert('Export Failed', result.message);
       }
     } catch (error: any) {
@@ -351,6 +414,7 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
           isSearchActive={isSearchActive}
         />
 
+
         {showFilters && (
           <LeadFilters
             filters={filters}
@@ -365,17 +429,6 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
           />
         )}
 
-        {isSearchActive && (
-          <SearchResultsSummary
-            isSearchActive={isSearchActive}
-            totalResults={pagination?.totalElements || 0}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            hasActiveFilters={hasActiveFilters}
-            activeFiltersSummary={getActiveFiltersSummary()}
-            onClearAll={handleClearAll}
-          />
-        )}
 
         <LeadsFeedback loading={loading} error={error} isEmpty={!loading && leads.length === 0} />
 

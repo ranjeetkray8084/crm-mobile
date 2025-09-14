@@ -143,6 +143,17 @@ export const API_ENDPOINTS = {
     SEND: '/api/notifications/send'
   },
 
+  // Push Token Endpoints (SimplePushTokenController)
+  PUSH_TOKENS: {
+    REGISTER: '/api/push-tokens/register',
+    DEACTIVATE: '/api/push-tokens/deactivate',
+    GET_USER_TOKENS: (userId) => `/api/push-tokens/user/${userId}`,
+    SEND_TEST: '/api/push-tokens/send-test',
+    SEND_TO_USER: '/api/push-tokens/send-to-user',
+    SEND_BROADCAST: '/api/push-tokens/send-broadcast',
+    GET_STATS: '/api/push-tokens/stats'
+  },
+
   // Property Management Endpoints (PropertyController)
   PROPERTIES: {
     CREATE: (companyId) => `/api/companies/${companyId}/properties`,

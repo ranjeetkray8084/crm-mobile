@@ -146,51 +146,62 @@ const UserSection: React.FC = () => {
   const renderUserCard = (user: User) => {
     const isActive = user.status === 'active' || user.status === true || user.status === 1;
     const isDirector = role === 'DIRECTOR';
+    const isDeveloper = role === 'DEVELOPER';
     const hasAdmin = user.adminName && user.adminName !== 'No Admin';
 
     return (
       <View key={user.userId} style={styles.userCard}>
         <View style={styles.userCardHeader}>
           <Text style={styles.userName}>{user.name}</Text>
-          <ThreeDotMenu
-            item={user}
-            actions={[
-              ...(role === 'DIRECTOR' || role === 'ADMIN' || role === 'DEVELOPER' ? [{
-                label: 'Update User',
-                icon: <Ionicons name="create-outline" size={14} color="#3B82F6" />,
-                onClick: () => setSelectedUser(user)
-              }] : []),
-              isActive
-                ? {
-                  label: 'Deactivate',
-                  icon: <Ionicons name="person-remove-outline" size={14} color="#EF4444" />,
-                  onClick: () => handleDeactivateUser(user.userId),
-                  danger: true
-                }
-                : {
-                  label: 'Activate',
-                  icon: <Ionicons name="person-check-outline" size={14} color="#10B981" />,
-                  onClick: () => handleActivateUser(user.userId)
-                },
-              ...(isDirector ? [
-                hasAdmin
+          {isDeveloper ? (
+            <Text style={styles.viewOnlyText}>View Only</Text>
+          ) : (
+            <ThreeDotMenu
+              item={user}
+              actions={[
+                ...(role === 'DIRECTOR' || role === 'ADMIN' ? [{
+                  label: 'Update User',
+                  icon: <Ionicons name="create-outline" size={14} color="#3B82F6" />,
+                  onClick: () => setSelectedUser(user)
+                }] : []),
+                isActive
                   ? {
-                    label: 'Unassign Admin',
+                    label: 'Deactivate',
                     icon: <Ionicons name="person-remove-outline" size={14} color="#EF4444" />,
-                    onClick: () => handleUnassignAdmin(user.userId),
+                    onClick: () => handleDeactivateUser(user.userId),
                     danger: true
                   }
                   : {
-                    label: 'Assign Admin',
-                    icon: <Ionicons name="person-add-outline" size={14} color="#10B981" />,
-                    onClick: () => setAssigningUser(user)
-                  }
-              ] : [])
-            ]}
-          />
+                    label: 'Activate',
+                    icon: <Ionicons name="person-check-outline" size={14} color="#10B981" />,
+                    onClick: () => handleActivateUser(user.userId)
+                  },
+                ...(isDirector ? [
+                  hasAdmin
+                    ? {
+                      label: 'Unassign Admin',
+                      icon: <Ionicons name="person-remove-outline" size={14} color="#EF4444" />,
+                      onClick: () => handleUnassignAdmin(user.userId),
+                      danger: true
+                    }
+                    : {
+                      label: 'Assign Admin',
+                      icon: <Ionicons name="person-add-outline" size={14} color="#10B981" />,
+                      onClick: () => setAssigningUser(user)
+                    }
+                ] : [])
+              ]}
+            />
+          )}
         </View>
         
         <View style={styles.userDetails}>
+          {isDeveloper && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>ID:</Text>
+              <Text style={styles.detailValue}>{user.userId}</Text>
+            </View>
+          )}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Email:</Text>
             <Text style={styles.detailValue}>{user.email}</Text>
@@ -199,12 +210,12 @@ const UserSection: React.FC = () => {
             <Text style={styles.detailLabel}>Phone:</Text>
             <Text style={styles.detailValue}>{user.phone}</Text>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Role:</Text>
-            <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{user.role}</Text>
+          {isDeveloper && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Company:</Text>
+              <Text style={styles.detailValue}>{user.company?.name || user.companyName || 'No Company'}</Text>
             </View>
-          </View>
+          )}
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Status:</Text>
             <View style={[
@@ -219,10 +230,12 @@ const UserSection: React.FC = () => {
               </Text>
             </View>
           </View>
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Admin:</Text>
-            <Text style={styles.detailValue}>{user.adminName || 'No Admin'}</Text>
-          </View>
+          {!isDeveloper && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Admin:</Text>
+              <Text style={styles.detailValue}>{user.adminName || 'No Admin'}</Text>
+            </View>
+          )}
         </View>
       </View>
     );
@@ -446,6 +459,11 @@ const styles = StyleSheet.create({
   },
   inactiveStatusText: {
     color: '#991B1B',
+  },
+  viewOnlyText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
 });
 

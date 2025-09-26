@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Share, Alert } from 'react-na
 import { Ionicons } from '@expo/vector-icons';
 import ThreeDotMenu from '../common/ThreeDotMenu';
 import StatusUpdateModal from '../common/StatusUpdateModal';
+import ReminderDateModal from '../common/ReminderDateModal';
 import PhoneNumber from '../common/PhoneNumber';
+import { useAuth } from '../../shared/contexts/AuthContext.jsx';
 
 interface Property {
   id?: number;
@@ -39,6 +41,7 @@ interface PropertyCardProps {
   onUpdate?: (property: Property) => void;
   onAddRemark?: (property: Property) => void;
   onViewRemarks?: (property: Property) => void;
+  onSetReminder?: (propertyId: number, reminderDate: string) => void;
   onOutOfBox?: (property: Property) => void;
   companyId?: number;
 }
@@ -49,12 +52,36 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
   onUpdate,
   onAddRemark,
   onViewRemarks,
+  onSetReminder,
   onOutOfBox,
   companyId
 }) => {
   const [statusModalVisible, setStatusModalVisible] = useState(false);
+  const [reminderModalVisible, setReminderModalVisible] = useState(false);
   const propertyId = property.id || property.propertyId;
   const propertyName = property.propertyName || property.name;
+
+  // Current user and role from auth context
+  const { user } = useAuth();
+  const currentUserRole: string | undefined = (user as any)?.role;
+  const currentUserId: string | number | undefined = (user as any)?.userId ?? (user as any)?.id;
+
+  // Access control logic (match web logic)
+  const canUpdateProperty = (): boolean => {
+    if (currentUserRole === 'DIRECTOR') {
+      return true;
+    }
+    const propertyCreatorId = (property as any)?.createdBy?.id || (property as any)?.createdBy?.userId || (property as any)?.createdById;
+    return !!propertyCreatorId && propertyCreatorId?.toString() === currentUserId?.toString();
+  };
+
+  const canChangeStatus = (): boolean => {
+    if (currentUserRole === 'DIRECTOR') {
+      return true;
+    }
+    const propertyCreatorId = (property as any)?.createdBy?.id || (property as any)?.createdBy?.userId || (property as any)?.createdById;
+    return !!propertyCreatorId && propertyCreatorId?.toString() === currentUserId?.toString();
+  };
 
   const formatPrice = (price: number) => {
     if (!price) return 'N/A';
@@ -98,6 +125,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         return { bg: '#fef3c7', text: '#92400e' };
       case 'SOLD_OUT':
         return { bg: '#fee2e2', text: '#991b1b' };
+      case 'DROPPED':
+        return { bg: '#f3f4f6', text: '#6b7280' };
       default:
         return { bg: '#f3f4f6', text: '#374151' };
     }
@@ -113,6 +142,8 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
         return 'Rented Out';
       case 'SOLD_OUT':
         return 'Sold Out';
+      case 'DROPPED':
+        return 'Dropped';
       default:
         return status || 'N/A';
     }
@@ -120,15 +151,52 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 
   const handleStatusChange = (newStatus: string) => {
     if (!onStatusChange || !propertyId) return;
-    onStatusChange(propertyId, newStatus);
+
+    // Permission check
+    if (!canChangeStatus()) {
+      Alert.alert('Permission Denied', 'Only the creator or director can change status');
+      return;
+    }
+    
+    // If changing to RENT_OUT, show reminder modal first
+    if (newStatus === 'RENT_OUT') {
+      setReminderModalVisible(true);
+    } else {
+      onStatusChange(propertyId, newStatus);
+    }
+  };
+
+  const handleSetReminder = async (reminderDate: string) => {
+    if (!onSetReminder || !propertyId || !onStatusChange) return;
+    
+    try {
+      // First change status to RENT_OUT
+      await onStatusChange(propertyId, 'RENT_OUT');
+      
+      // Wait a moment for status update to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Then set the reminder
+      await onSetReminder(propertyId, reminderDate);
+      
+      // Close the modal
+      setReminderModalVisible(false);
+    } catch (error) {
+      console.error('Error setting reminder:', error);
+    }
   };
 
   const actions = [
-    {
-      label: 'Update Property',
-      icon: <Ionicons name="create" size={14} color="#6b7280" />,
-      onClick: () => onUpdate?.(property)
-    },
+    // Conditionally allow update based on permission
+    ...(
+      canUpdateProperty()
+        ? [{
+            label: 'Update Property',
+            icon: <Ionicons name="create" size={14} color="#6b7280" />,
+            onClick: () => onUpdate?.(property)
+          }]
+        : []
+    ),
     {
       label: 'Add Remark',
       icon: <Ionicons name="chatbubble" size={14} color="#6b7280" />,
@@ -138,7 +206,13 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
       label: 'View Remarks',
       icon: <Ionicons name="eye" size={14} color="#6b7280" />,
       onClick: () => onViewRemarks?.(property)
-    }
+    },
+    // Add reminder action only for RENT_OUT status
+    ...(property.status === 'RENT_OUT' ? [{
+      label: 'Set Reminder',
+      icon: <Ionicons name="alarm" size={14} color="#6b7280" />,
+      onClick: () => setReminderModalVisible(true)
+    }] : [])
   ];
 
   const statusStyle = getStatusColor(property.status || '');
@@ -168,10 +242,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
     const propertyName = property.propertyName || property.name || 'Unnamed Property';
     const location = property.location || 'N/A';
     const type = property.type || 'N/A';
-    const bhk = property.bhk ? `${property.bhk} BHK` : 'N/A';
+    const bhk = property.bhk ? `${property.bhk}` : 'N/A';
     const price = property.price ? `₹${property.price.toLocaleString('en-IN')}` : 'N/A';
     const size = property.size || 'N/A';
-    const source = property.source || 'N/A';
     const status = getStatusLabel(property.status || '');
 
     return `🏠 *${propertyName}*
@@ -181,10 +254,9 @@ const PropertyCard: React.FC<PropertyCardProps> = ({
 🏠 BHK: ${bhk}
 💰 Price: ${price}
 📏 Size: ${size}
-📊 Source: ${source}
 📋 Status: ${status}
 
-Shared from CRM App`;
+Shared from Leadstracker.in App`;
   };
 
   return (
@@ -228,7 +300,7 @@ Shared from CRM App`;
           </View>
           <View style={styles.detailItem}>
             <Text style={styles.detailLabel}>BHK</Text>
-            <Text style={styles.detailValue}>{property.bhk ? `${property.bhk} BHK` : 'N/A'}</Text>
+            <Text style={styles.detailValue}>{property.bhk ? `${property.bhk}` : 'N/A'}</Text>
           </View>
         </View>
         
@@ -286,7 +358,13 @@ Shared from CRM App`;
       <View style={styles.statusContainer}>
         <TouchableOpacity
           style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}
-          onPress={() => setStatusModalVisible(true)}
+          onPress={() => {
+            if (canChangeStatus()) {
+              setStatusModalVisible(true);
+            } else {
+              Alert.alert('Permission Denied', 'Only the creator or director can change status');
+            }
+          }}
         >
           <Text style={[styles.statusText, { color: statusStyle.text }]}>
             {getStatusLabel(property.status || '')}
@@ -305,9 +383,18 @@ Shared from CRM App`;
           { value: 'AVAILABLE_FOR_SALE', label: 'For Sale' },
           { value: 'AVAILABLE_FOR_RENT', label: 'For Rent' },
           { value: 'RENT_OUT', label: 'Rented Out' },
-          { value: 'SOLD_OUT', label: 'Sold Out' }
+          { value: 'SOLD_OUT', label: 'Sold Out' },
+          { value: 'DROPPED', label: 'Dropped' }
         ]}
         currentStatus={property.status}
+      />
+
+      {/* Reminder Date Modal */}
+      <ReminderDateModal
+        visible={reminderModalVisible}
+        onClose={() => setReminderModalVisible(false)}
+        onSetReminder={handleSetReminder}
+        propertyName={propertyName || 'Unknown Property'}
       />
 
       {/* Footer */}

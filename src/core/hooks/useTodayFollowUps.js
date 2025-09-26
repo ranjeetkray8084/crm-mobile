@@ -1,20 +1,30 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FollowUpService } from '../services/followup.service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const useTodayFollowUps = (companyId) => {
   const [todayFollowUps, setTodayFollowUps] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Get companyId from localStorage if not provided
-  const getCompanyId = useCallback(() => {
+  // Get companyId from AsyncStorage if not provided
+  const getCompanyId = useCallback(async () => {
     if (companyId) return companyId;
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    return user.companyId;
+    try {
+      const user = await AsyncStorage.getItem('user');
+      if (user) {
+        const parsedUser = JSON.parse(user);
+        return parsedUser.companyId;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting user from AsyncStorage:', error);
+      return null;
+    }
   }, [companyId]);
 
   const loadTodayFollowUps = useCallback(async () => {
-    const currentCompanyId = getCompanyId();
+    const currentCompanyId = await getCompanyId();
     if (!currentCompanyId) {
       setError('Company ID is required');
       return;

@@ -21,6 +21,8 @@ import AddFollowUpModal from './modals/AddFollowUpModal';
 import ViewFollowUpsModal from './modals/ViewFollowUpsModal';
 import AddLeadForm from './AddLeadForm';
 import Logo from '../common/Logo';
+import SaleRentSelectionModal from '../common/SaleRentSelectionModal';
+import LeadReminderModal from '../common/LeadReminderModal';
 import { Lead } from '../../types/lead';
 
 interface LeadsSectionProps {
@@ -46,6 +48,8 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
   });
   const [showAddLeadForm, setShowAddLeadForm] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [saleRentModal, setSaleRentModal] = useState({ isOpen: false, lead: null, pendingStatusChange: null });
+  const [leadReminderModal, setLeadReminderModal] = useState({ isOpen: false, lead: null });
 
   const pageSize = 10;
 
@@ -59,7 +63,7 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
   const {
     leads, loading, error, pagination, loadLeads, searchLeads,
     updateLeadStatus, updateLead, deleteLead, addRemark,
-    assignLead, unassignLead, getRemarks, addFollowUp
+    assignLead, unassignLead, getRemarks, addFollowUp, setReminder
   } = useLeads(companyId, userId, userRole);
 
   const { users: filterUsers } = useUsers(companyId);
@@ -294,6 +298,64 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
     setShowFilters(!showFilters);
   };
 
+  // Modal handlers for lead reminder flow
+  const handleShowSaleRentModal = (lead: Lead, pendingStatusChange: string) => {
+    setSaleRentModal({
+      isOpen: true,
+      lead: lead,
+      pendingStatusChange: pendingStatusChange
+    });
+  };
+
+  const handleSaleSelected = async () => {
+    const lead = saleRentModal.lead;
+    const pendingStatusChange = saleRentModal.pendingStatusChange;
+    
+    // Close the modal first
+    setSaleRentModal({ isOpen: false, lead: null, pendingStatusChange: null });
+    
+    // Update status to CLOSED (Sale)
+    if (pendingStatusChange && lead) {
+      await updateLeadStatus(lead.id || lead.leadId, pendingStatusChange);
+      handleRefresh();
+    }
+  };
+
+  const handleRentSelected = () => {
+    const lead = saleRentModal.lead;
+    
+    // Close Sale/Rent modal and open reminder modal
+    setSaleRentModal({ isOpen: false, lead: null, pendingStatusChange: null });
+    setLeadReminderModal({ isOpen: true, lead: lead });
+  };
+
+  const handleSetLeadReminder = async (reminderDate: string) => {
+    const lead = leadReminderModal.lead;
+    
+    if (!lead) return;
+    
+    try {
+      // First update status to CLOSED
+      await updateLeadStatus(lead.id || lead.leadId, 'CLOSED');
+      
+      // Wait a moment for status update to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Then set the reminder
+      const result = await setReminder(lead.id || lead.leadId, reminderDate);
+      
+      if (result.success) {
+        Alert.alert('Success', 'Reminder is set successfully! You will receive notifications on the reminder date at 9:00 AM.');
+        handleRefresh();
+        setLeadReminderModal({ isOpen: false, lead: null });
+      } else {
+        Alert.alert('Error', `Failed to set reminder: ${result.error}`);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to set reminder: ${error.message}`);
+    }
+  };
+
 
   const handleExport = async () => {
     try {
@@ -382,6 +444,7 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
 
   const actionHandlers = {
     onStatusUpdate: handleStatusUpdate,
+    onShowSaleRentModal: handleShowSaleRentModal,
     onDelete: handleDeleteLead,
     onAssign: handleAssignLead,
     onUnassign: handleUnassignLead,
@@ -515,6 +578,23 @@ const LeadsSection: React.FC<LeadsSectionProps> = ({ userRole, userId, companyId
         onConfirm={confirmModal.onConfirm}
         title={confirmModal.title}
         message={confirmModal.message}
+      />
+
+      {/* Sale/Rent Selection Modal */}
+      <SaleRentSelectionModal
+        visible={saleRentModal.isOpen}
+        onClose={() => setSaleRentModal({ isOpen: false, lead: null, pendingStatusChange: null })}
+        onSelectSale={handleSaleSelected}
+        onSelectRent={handleRentSelected}
+        leadName={saleRentModal.lead?.name || 'Unknown Lead'}
+      />
+
+      {/* Lead Reminder Modal */}
+      <LeadReminderModal
+        visible={leadReminderModal.isOpen}
+        onClose={() => setLeadReminderModal({ isOpen: false, lead: null })}
+        onSetReminder={handleSetLeadReminder}
+        leadName={leadReminderModal.lead?.name || 'Unknown Lead'}
       />
 
       {/* Add Lead Form Modal - Removed */}

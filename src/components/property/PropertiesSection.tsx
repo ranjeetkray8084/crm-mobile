@@ -6,6 +6,8 @@ import { useUsers } from '../../core/hooks/useUsers';
 import { exportProperties, exportPropertiesWithRole, exportPropertiesWithRoleAndDownload, exportDataWithDynamicColumns } from '../../core/utils/excelExport';
 import { exportPropertiesFromBackend } from '../../core/utils/backendExcelExport';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_CONFIG } from '../../core/config/api.config';
+import { AuthService } from '../../core/services/auth.service';
 import PropertyToolbar from './PropertyToolbar';
 import PropertyFilters from './PropertyFilters';
 import PropertiesList from './PropertiesList';
@@ -70,14 +72,15 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
     }, 0);
   }, [clearAll, loadProperties, pageSize]);
 
-  // Initial load and page changes
+  // Initial load and page changes (only when search is NOT active)
   useEffect(() => {
     if (!companyId) {
       return;
     }
-    
-    loadProperties(currentPage, pageSize);
-  }, [companyId, currentPage, refreshKey, loadProperties, pageSize]);
+    if (!isSearchActive) {
+      loadProperties(currentPage, pageSize);
+    }
+  }, [companyId, currentPage, refreshKey, loadProperties, pageSize, isSearchActive]);
 
   // Handle search when search params change or search is triggered
   useEffect(() => {
@@ -108,6 +111,7 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
   // Manual search trigger
   const handleManualSearch = useCallback(() => {
     if (companyId && (searchTags.length > 0 || hasActiveFilters || searchTerm.trim())) {
+      setCurrentPage(0);
       applySearch();
     }
   }, [companyId, searchTags.length, hasActiveFilters, searchTerm, applySearch]);
@@ -124,6 +128,42 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
       handleRefresh();
     } catch (error: any) {
       Alert.alert('Error', `Failed to update property status: ${error.message}`);
+    }
+  };
+
+  const handleSetReminder = async (propertyId: number, reminderDate: string) => {
+    try {
+      if (!companyId) {
+        Alert.alert('Error', 'Company ID is required');
+        return;
+      }
+
+      const token = await AuthService.getToken();
+      if (!token) {
+        Alert.alert('Error', 'Authentication required');
+        return;
+      }
+
+      const apiBaseUrl = API_CONFIG.DEVELOPMENT.baseURL;
+      const response = await fetch(`${apiBaseUrl}/api/companies/${companyId}/properties/${propertyId}/set-reminder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ reminderDate })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        Alert.alert('Success', result.message || 'Reminder set successfully');
+        handleRefresh();
+      } else {
+        Alert.alert('Error', result || 'Failed to set reminder');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', `Failed to set reminder: ${error.message}`);
     }
   };
 
@@ -298,7 +338,7 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
       {isSearchActive && (
         <SearchResultsSummary
           searchParams={searchParams}
-          resultsCount={properties.length}
+          resultsCount={pagination?.totalElements || properties.length}
           onClearAll={handleClearAll}
           getActiveFiltersSummary={getActiveFiltersSummary}
           currentUserId={userId || undefined}
@@ -315,6 +355,7 @@ const PropertiesSection: React.FC<PropertiesSectionProps> = ({
         onUpdate={handleUpdateProperty}
         onAddRemark={handleAddRemark}
         onViewRemarks={handleViewRemarks}
+        onSetReminder={handleSetReminder}
         onOutOfBox={handleOutOfBox}
         companyId={companyId}
         currentPage={currentPage}

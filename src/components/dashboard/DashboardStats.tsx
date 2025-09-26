@@ -9,21 +9,29 @@ import { getApiBaseUrl } from '../../core/config/api.config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import SimpleTokenService from '../../core/services/SimpleTokenService';
 
-const DashboardStats = () => {
-  const { user } = useAuth();
-  const companyId = user?.companyId;
-  const userId = user?.userId || user?.id;
-  const role = user?.role;
+interface DashboardStatsProps {
+  userRole?: string;
+  userId?: string;
+  companyId?: string;
+}
 
-  const { stats, loading, error } = useDashboardStats(companyId, userId, role);
-  const { todayEvents, loading: eventsLoading, error: eventsError } = useDashboardEvents(companyId, userId, role);
-  const { todayFollowUps, loading: followUpsLoading, error: followUpsError } = useTodayFollowUps(companyId);
+const DashboardStats = ({ userRole, userId, companyId }: DashboardStatsProps) => {
+  const { user } = useAuth();
+  
+  // Use props if provided, otherwise fall back to auth context
+  const finalCompanyId = companyId || user?.companyId;
+  const finalUserId = userId || user?.userId || user?.id;
+  const finalRole = userRole || user?.role;
+
+  const { stats, loading, error } = useDashboardStats(finalCompanyId, finalUserId, finalRole);
+  const { todayEvents, loading: eventsLoading, error: eventsError } = useDashboardEvents(finalCompanyId, finalUserId, finalRole);
+  const { todayFollowUps, loading: followUpsLoading, error: followUpsError } = useTodayFollowUps(finalCompanyId);
 
   // Debug logging for leads data
   console.log('🔍 DashboardStats Debug:', {
-    companyId,
-    userId,
-    role,
+    finalCompanyId,
+    finalUserId,
+    finalRole,
     stats: {
       totalLeads: stats?.totalLeads,
       newLeads: stats?.newLeads,
@@ -32,9 +40,13 @@ const DashboardStats = () => {
       totalUsers: stats?.totalUsers,
       totalAdmins: stats?.totalAdmins,
       totalDirectors: stats?.totalDirectors,
+      propertyOverview: stats?.propertyOverview,
+      dealsOverview: stats?.dealsOverview,
     },
     loading,
-    error
+    error,
+    statsKeys: Object.keys(stats || {}),
+    statsValues: stats
   });
 
   // Debug logging for follow-ups data
@@ -42,6 +54,13 @@ const DashboardStats = () => {
     todayFollowUps,
     followUpsLoading,
     followUpsError
+  });
+
+  // Debug logging for deals overview data
+  console.log('💼 Deals Overview Debug:', {
+    dealsOverview: stats?.dealsOverview,
+    dealsOverviewKeys: stats?.dealsOverview ? Object.keys(stats.dealsOverview) : 'No dealsOverview',
+    dealsOverviewValues: stats?.dealsOverview
   });
 
   // Function to handle phone number clicks
@@ -70,7 +89,7 @@ const DashboardStats = () => {
   };
 
 
-  if (!user || !userId || !role) {
+  if (!user || !finalUserId || !finalRole) {
     return (
       <View style={styles.container}>
         <View style={styles.warningCard}>
@@ -104,8 +123,9 @@ const DashboardStats = () => {
     );
   }
 
-  // Render different stats based on user role
-  if (role === 'DEVELOPER') {
+  // Render different stats based on user role - EXACTLY matching web app
+  if (finalRole === 'DEVELOPER') {
+    // DEVELOPER: Only 4 stat cards, NO events/follow-ups
     return (
       <View style={styles.container}>
         <View style={styles.statsGrid}>
@@ -138,7 +158,33 @@ const DashboardStats = () => {
     );
   }
 
-  // For other roles, show business stats
+  if (finalRole === 'USER') {
+    // USER: 3 cards + Events + Follow-ups
+    return (
+      <View style={styles.container}>
+        <View style={styles.statsGrid}>
+          <LeadsCard
+            totalLeads={stats?.totalLeads}
+            newLeads={stats?.newLeads}
+            contactedLeads={stats?.contactedLeads}
+          />
+          <PropertyOverviewCard propertyOverview={stats?.propertyOverview} />
+          <DealsClosedCard dealsOverview={stats?.dealsOverview} />
+          
+          {/* Events and Follow-ups for USER */}
+          <EventsCard events={todayEvents} loading={eventsLoading} error={eventsError} />
+          <FollowUpsCard 
+            followUps={todayFollowUps} 
+            loading={followUpsLoading} 
+            error={followUpsError}
+            onPhoneNumberClick={handlePhoneNumberClick}
+          />
+        </View>
+      </View>
+    );
+  }
+
+  // ADMIN/DIRECTOR: 4 cards + Events + Follow-ups
   return (
     <View style={styles.container}>
       <View style={styles.statsGrid}>
@@ -148,22 +194,20 @@ const DashboardStats = () => {
           contactedLeads={stats?.contactedLeads}
         />
         <PropertyOverviewCard propertyOverview={stats?.propertyOverview} />
-                 <DealsClosedCard dealsOverview={stats?.dealsOverview} />
-         {role !== 'USER' && (
-           <UsersAdminsOverviewCard usersOverview={stats?.usersOverview} />
-         )}
-                   <EventsCard events={todayEvents} loading={eventsLoading} error={eventsError} />
-          <FollowUpsCard 
-            followUps={todayFollowUps} 
-            loading={followUpsLoading} 
-            error={followUpsError}
-            onPhoneNumberClick={handlePhoneNumberClick}
-          />
-          
-          
-       </View>
-     </View>
-   );
+        <DealsClosedCard dealsOverview={stats?.dealsOverview} />
+        <UsersAdminsOverviewCard usersOverview={stats?.usersOverview} />
+        
+        {/* Events and Follow-ups for ADMIN/DIRECTOR */}
+        <EventsCard events={todayEvents} loading={eventsLoading} error={eventsError} />
+        <FollowUpsCard 
+          followUps={todayFollowUps} 
+          loading={followUpsLoading} 
+          error={followUpsError}
+          onPhoneNumberClick={handlePhoneNumberClick}
+        />
+      </View>
+    </View>
+  );
  };
 
 const StatCard = ({ title, count, icon, color }: {
@@ -221,6 +265,8 @@ const LeadsCard = ({ totalLeads, newLeads, contactedLeads }: {
 const PropertyOverviewCard = ({ propertyOverview }: {
   propertyOverview?: any;
 }) => {
+  console.log('🏢 PropertyOverviewCard: Received data:', propertyOverview);
+  
   if (!propertyOverview) {
     return (
       <View style={[styles.statCard, { backgroundColor: '#00b445' }]}>
@@ -240,7 +286,8 @@ const PropertyOverviewCard = ({ propertyOverview }: {
     'available for sale': availableForSale = 0,
     'available for rent': availableForRent = 0,
     'sold out': soldOut = 0,
-    'rent out': rentOut = 0
+    'rent out': rentOut = 0,
+    'dropped': dropped = 0
   } = propertyOverview;
 
   return (
@@ -263,10 +310,10 @@ const PropertyOverviewCard = ({ propertyOverview }: {
           </View>
         </View>
 
-        {/* Two Column Layout for Sales and Rental */}
+        {/* Two Row Layout */}
         <View style={styles.propertyGrid}>
-          {/* Left Side - Available Properties */}
-          <View style={styles.propertyColumn}>
+          {/* Top Row - Available Properties */}
+          <View style={styles.propertyRow}>
             <View style={styles.propertyStat}>
               <View style={styles.propertyStatHeader}>
                 <Ionicons name="home-outline" size={14} color="#d1fae5" />
@@ -284,8 +331,8 @@ const PropertyOverviewCard = ({ propertyOverview }: {
             </View>
           </View>
 
-          {/* Right Side - Completed Properties */}
-          <View style={styles.propertyColumn}>
+          {/* Bottom Row - Completed and Dropped Properties */}
+          <View style={styles.propertyRow}>
             <View style={styles.propertyStat}>
               <View style={styles.propertyStatHeader}>
                 <Ionicons name="checkmark-circle-outline" size={14} color="#d1fae5" />
@@ -300,6 +347,14 @@ const PropertyOverviewCard = ({ propertyOverview }: {
                 <Text style={styles.propertyStatLabel}>Rent Out</Text>
               </View>
               <Text style={styles.propertyStatCount}>{rentOut}</Text>
+            </View>
+
+            <View style={styles.propertyStat}>
+              <View style={styles.propertyStatHeader}>
+                <Ionicons name="close-circle-outline" size={14} color="#d1fae5" />
+                <Text style={styles.propertyStatLabel}>Dropped</Text>
+              </View>
+              <Text style={styles.propertyStatCount}>{dropped}</Text>
             </View>
           </View>
         </View>
@@ -397,76 +452,139 @@ const UsersAdminsOverviewCard = ({ usersOverview }: {
     );
   }
 
-  const {
-    totalUsers = 0,
-    activeNormalUsers = 0,
-    activeAdmins = 0
-  } = usersOverview;
+  // Check if this is admin data (has totalAssignedUsers) or director data (has totalUsers)
+  const isAdminData = usersOverview.hasOwnProperty('totalAssignedUsers');
 
-  return (
-    <View style={[styles.statCard, { backgroundColor: '#A12FFF' }]}>
-      <View style={styles.statContent}>
-        {/* Header with title and people icon */}
-        <View style={styles.usersHeader}>
-          <Text style={styles.usersTitle}>Users & Admins</Text>
-          <Ionicons name="people-outline" size={24} color="#e9d5ff" />
-        </View>
+  if (isAdminData) {
+    // Admin data structure
+    const {
+      totalAssignedUsers = 0,
+      activeAssignedUsers = 0,
+      deactiveAssignedUsers = 0
+    } = usersOverview;
 
-        {/* Total Users section with border */}
-        <View style={styles.totalUsersSection}>
-          <View style={styles.totalUsersRow}>
-            <View style={styles.totalUsersLeft}>
-              <Ionicons name="people-outline" size={18} color="#e9d5ff" />
-              <Text style={styles.totalUsersLabel}>Total Users</Text>
-            </View>
-            <Text style={styles.totalUsersCount}>{totalUsers}</Text>
+    return (
+      <View style={[styles.statCard, { backgroundColor: '#A12FFF' }]}>
+        <View style={styles.statContent}>
+          {/* Header with title and people icon */}
+          <View style={styles.usersHeader}>
+            <Text style={styles.usersTitle}>Assigned Users</Text>
+            <Ionicons name="people-outline" size={24} color="#e9d5ff" />
           </View>
-        </View>
 
-        {/* Two Column Layout for Users and Admins */}
-        <View style={styles.usersGrid}>
-          {/* Left Side - Users */}
-          <View style={styles.usersColumn}>
-            <View style={styles.usersStat}>
-              <View style={styles.usersStatHeader}>
-                <Ionicons name="checkmark-circle-outline" size={14} color="#e9d5ff" />
-                <Text style={styles.usersStatLabel}>Active Users</Text>
+          {/* Total Assigned Users section with border */}
+          <View style={styles.totalUsersSection}>
+            <View style={styles.totalUsersRow}>
+              <View style={styles.totalUsersLeft}>
+                <Ionicons name="people-outline" size={18} color="#e9d5ff" />
+                <Text style={styles.totalUsersLabel}>Total Assigned</Text>
               </View>
-              <Text style={styles.usersStatCount}>{activeNormalUsers}</Text>
-            </View>
-
-            <View style={styles.usersStat}>
-              <View style={styles.usersStatHeader}>
-                <Ionicons name="people-outline" size={14} color="#e9d5ff" />
-                <Text style={styles.usersStatLabel}>Normal Users</Text>
-              </View>
-              <Text style={styles.usersStatCount}>{activeNormalUsers}</Text>
+              <Text style={styles.totalUsersCount}>{totalAssignedUsers}</Text>
             </View>
           </View>
 
-          {/* Right Side - Admins */}
-          <View style={styles.usersColumn}>
-            <View style={styles.usersStat}>
-              <View style={styles.usersStatHeader}>
-                <Ionicons name="shield-outline" size={14} color="#e9d5ff" />
-                <Text style={styles.usersStatLabel}>Active Admins</Text>
+          {/* Two Column Layout for Active and Inactive Users */}
+          <View style={styles.usersGrid}>
+            {/* Left Side - Active Assigned Users */}
+            <View style={styles.usersColumn}>
+              <View style={styles.usersStat}>
+                <View style={styles.usersStatHeader}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#e9d5ff" />
+                  <Text style={styles.usersStatLabel}>Active Users</Text>
+                </View>
+                <Text style={styles.usersStatCount}>{activeAssignedUsers}</Text>
               </View>
-              <Text style={styles.usersStatCount}>{activeAdmins}</Text>
             </View>
 
-            <View style={styles.usersStat}>
-              <View style={styles.usersStatHeader}>
-                <Ionicons name="shield-outline" size={14} color="#e9d5ff" />
-                <Text style={styles.usersStatLabel}>Total Admins</Text>
+            {/* Right Side - Inactive Assigned Users */}
+            <View style={styles.usersColumn}>
+              <View style={styles.usersStat}>
+                <View style={styles.usersStatHeader}>
+                  <Ionicons name="close-circle-outline" size={14} color="#e9d5ff" />
+                  <Text style={styles.usersStatLabel}>Inactive Users</Text>
+                </View>
+                <Text style={styles.usersStatCount}>{deactiveAssignedUsers}</Text>
               </View>
-              <Text style={styles.usersStatCount}>{activeAdmins}</Text>
             </View>
           </View>
         </View>
       </View>
-    </View>
-     );
- };
+    );
+  } else {
+    // Director data structure (original)
+    const {
+      totalUsers = 0,
+      activeNormalUsers = 0,
+      activeAdmins = 0,
+      totalNormalUsers = 0,
+      totalAdmins = 0
+    } = usersOverview;
+
+    return (
+      <View style={[styles.statCard, { backgroundColor: '#A12FFF' }]}>
+        <View style={styles.statContent}>
+          {/* Header with title and people icon */}
+          <View style={styles.usersHeader}>
+            <Text style={styles.usersTitle}>Users & Admins</Text>
+            <Ionicons name="people-outline" size={24} color="#e9d5ff" />
+          </View>
+
+          {/* Total Users section with border */}
+          <View style={styles.totalUsersSection}>
+            <View style={styles.totalUsersRow}>
+              <View style={styles.totalUsersLeft}>
+                <Ionicons name="people-outline" size={18} color="#e9d5ff" />
+                <Text style={styles.totalUsersLabel}>Total Users</Text>
+              </View>
+              <Text style={styles.totalUsersCount}>{totalUsers}</Text>
+            </View>
+          </View>
+
+          {/* Two Column Layout for Users and Admins */}
+          <View style={styles.usersGrid}>
+            {/* Left Side - Users */}
+            <View style={styles.usersColumn}>
+              <View style={styles.usersStat}>
+                <View style={styles.usersStatHeader}>
+                  <Ionicons name="checkmark-circle-outline" size={14} color="#e9d5ff" />
+                  <Text style={styles.usersStatLabel}>Active Users</Text>
+                </View>
+                <Text style={styles.usersStatCount}>{activeNormalUsers}</Text>
+              </View>
+
+              <View style={styles.usersStat}>
+                <View style={styles.usersStatHeader}>
+                  <Ionicons name="people-outline" size={14} color="#e9d5ff" />
+                  <Text style={styles.usersStatLabel}>Normal Users</Text>
+                </View>
+                <Text style={styles.usersStatCount}>{totalNormalUsers}</Text>
+              </View>
+            </View>
+
+            {/* Right Side - Admins */}
+            <View style={styles.usersColumn}>
+              <View style={styles.usersStat}>
+                <View style={styles.usersStatHeader}>
+                  <Ionicons name="shield-outline" size={14} color="#e9d5ff" />
+                  <Text style={styles.usersStatLabel}>Active Admins</Text>
+                </View>
+                <Text style={styles.usersStatCount}>{activeAdmins}</Text>
+              </View>
+
+              <View style={styles.usersStat}>
+                <View style={styles.usersStatHeader}>
+                  <Ionicons name="shield-outline" size={14} color="#e9d5ff" />
+                  <Text style={styles.usersStatLabel}>Total Admins</Text>
+                </View>
+                <Text style={styles.usersStatCount}>{totalAdmins}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  }
+};
  
  const EventsCard = ({ events, loading, error }) => {
   if (loading) {
@@ -830,15 +948,16 @@ const UsersAdminsOverviewCard = ({ usersOverview }: {
     fontWeight: 'bold',
   },
   propertyGrid: {
-    flexDirection: 'row',
-    gap: 24,
+    gap: 16,
   },
-  propertyColumn: {
-    flex: 1,
-    gap: 12,
+  propertyRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 8,
   },
   propertyStat: {
     alignItems: 'center',
+    flex: 1,
   },
   propertyStatHeader: {
     flexDirection: 'row',
@@ -848,8 +967,9 @@ const UsersAdminsOverviewCard = ({ usersOverview }: {
   },
   propertyStatLabel: {
     color: '#d1fae5',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '500',
+    textAlign: 'center',
   },
   propertyStatCount: {
     color: '#ffffff',

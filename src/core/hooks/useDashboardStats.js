@@ -60,6 +60,7 @@ export const useDashboardStats = (companyId, userId, role) => {
           'available for rent': 0,
           'sold out': 0,
           'rent out': 0,
+          'dropped': 0,
         },
         dealsOverview: {
           'total close': 0,
@@ -93,6 +94,14 @@ export const useDashboardStats = (companyId, userId, role) => {
         propertiesResult = await DashboardService.getPropertiesCount(companyId);
         propertiesOverviewResult = await DashboardService.getPropertiesOverview(companyId);
       }
+
+      // Debug logging for property overview
+      console.log('🏢 Property Overview Debug:', {
+        companyId,
+        role,
+        propertiesOverviewResult,
+        propertiesResult
+      });
 
       let closedLeadsResult;
       if (role === 'ADMIN') {
@@ -162,6 +171,7 @@ export const useDashboardStats = (companyId, userId, role) => {
           'available for rent': propertiesOverviewResult.data?.['available for rent'] || 0,
           'sold out': propertiesOverviewResult.data?.['sold out'] || 0,
           'rent out': propertiesOverviewResult.data?.['rent out'] || 0,
+          'dropped': propertiesOverviewResult.data?.['dropped'] || 0,
         },
         dealsOverview: {
           'total close': dealsCloseResult.data?.['total close'] || 0,

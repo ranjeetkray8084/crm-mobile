@@ -5,6 +5,7 @@ import * as DocumentPicker from 'expo-document-picker';
 
 interface TaskData {
   title: string;
+  purpose: string;
   file: any;
 }
 
@@ -15,6 +16,7 @@ interface TaskUploadFormProps {
 
 const TaskUploadForm: React.FC<TaskUploadFormProps> = ({ onUpload, loading = false }) => {
   const [title, setTitle] = useState('');
+  const [purpose, setPurpose] = useState('');
   const [file, setFile] = useState<any>(null);
   const [error, setError] = useState('');
 
@@ -40,6 +42,13 @@ const TaskUploadForm: React.FC<TaskUploadFormProps> = ({ onUpload, loading = fal
           return;
         }
 
+        // Auto-populate title with filename (without extension) - ONLY after validation passes
+        const fileNameWithoutExt = selectedFile.name.replace(/\.[^/.]+$/, "");
+        if (!title.trim()) {
+          setTitle(fileNameWithoutExt);
+          console.log('TaskUploadForm: Auto-populated title from filename:', fileNameWithoutExt);
+        }
+
         setFile(selectedFile);
         setError('');
       }
@@ -52,11 +61,18 @@ const TaskUploadForm: React.FC<TaskUploadFormProps> = ({ onUpload, loading = fal
   const removeFile = () => {
     setFile(null);
     setError('');
+    // Clear title when file is removed
+    setTitle('');
   };
 
   const handleSubmit = async () => {
     if (!title.trim()) {
       setError('❌ Task title is required');
+      return;
+    }
+
+    if (!purpose.trim()) {
+      setError('❌ Task purpose is required');
       return;
     }
 
@@ -67,6 +83,7 @@ const TaskUploadForm: React.FC<TaskUploadFormProps> = ({ onUpload, loading = fal
 
     const taskData = {
       title: title.trim(),
+      purpose: purpose.trim(),
       file
     };
 
@@ -75,6 +92,7 @@ const TaskUploadForm: React.FC<TaskUploadFormProps> = ({ onUpload, loading = fal
       
       if (result?.success) {
         setTitle('');
+        setPurpose('');
         setFile(null);
         setError('');
         Alert.alert('Success', 'Task uploaded successfully!');
@@ -99,6 +117,19 @@ const TaskUploadForm: React.FC<TaskUploadFormProps> = ({ onUpload, loading = fal
             value={title}
             onChangeText={setTitle}
             placeholder="Enter task title"
+            placeholderTextColor="#9ca3af"
+            editable={!loading}
+          />
+        </View>
+
+        {/* Purpose Field */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Task Purpose</Text>
+          <TextInput
+            style={styles.input}
+            value={purpose}
+            onChangeText={setPurpose}
+            placeholder="Enter task purpose (e.g., Lead generation, Data analysis, etc.)"
             placeholderTextColor="#9ca3af"
             editable={!loading}
           />
@@ -158,7 +189,7 @@ const TaskUploadForm: React.FC<TaskUploadFormProps> = ({ onUpload, loading = fal
         <TouchableOpacity
           style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleSubmit}
-          disabled={loading || !title.trim() || !file}
+          disabled={loading || !title.trim() || !purpose.trim() || !file}
         >
           {loading ? (
             <View style={styles.loadingContainer}>

@@ -303,6 +303,14 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ onSuccess, onCancel }
                 Sold Out
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.pickerOption, form.status === 'DROPPED' && styles.pickerOptionSelected]}
+              onPress={() => handleChange('status', 'DROPPED')}
+            >
+              <Text style={[styles.pickerOptionText, form.status === 'DROPPED' && styles.pickerOptionTextSelected]}>
+                Dropped
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 

@@ -1,11 +1,12 @@
 // src/components/Dashboard.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, RefreshControl, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../shared/contexts/AuthContext';
 import { useResponsive } from '../core/hooks/useResponsive';
+import { useNavigationHistory } from '../core/hooks/useNavigationHistory';
 import Sidebar from './common/Sidebar';
 import NotificationDropdown from './common/NotificationDropdown';
 import DashboardStats from './dashboard/DashboardStats';
@@ -31,10 +32,80 @@ export default function Dashboard({
 }: DashboardProps) {
   const responsive = useResponsive();
   const router = useRouter();
-  const { user } = useAuth();
-  const [activeSection, setActiveSection] = useState('dashboard');
+  const { user, loading: authLoading, isAuthenticated } = useAuth();
+  
+  // Use navigation history hook for better navigation management
+  const { 
+    currentSection: activeSection, 
+    navigateToSection: setActiveSection, 
+    goBack 
+  } = useNavigationHistory('dashboard');
+  
   const [showSidebar, setShowSidebar] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [userRole, setUserRole] = useState('');
+  const [userName, setUserName] = useState('');
+  const [userId, setUserId] = useState('');
+  const [companyId, setCompanyId] = useState('');
+  const [companyName, setCompanyName] = useState('SmartProCare');
+
+  // Dashboard initialization
+  useEffect(() => {
+    const initializeDashboard = () => {
+      console.log('🔧 Dashboard: Initializing...');
+      console.log('🔧 Dashboard: Auth state:', { isAuthenticated, authLoading, user: !!user });
+      
+      if (authLoading) {
+        console.log('🔧 Dashboard: Auth still loading, waiting...');
+        return;
+      }
+      
+      if (!isAuthenticated || !user) {
+        console.log('🔧 Dashboard: User not authenticated, redirecting to login');
+        router.replace('/login');
+        return;
+      }
+      
+      try {
+        const finalUserId = user.userId || user.id || '';
+        const finalUserRole = user.role || '';
+        const finalCompanyId = user.companyId || '';
+        
+        // More lenient check - only redirect if critical data is missing
+        if (!finalUserId || !finalUserRole) {
+          console.log('🔧 Dashboard: Critical user data missing, redirecting to login');
+          router.replace('/login');
+          return;
+        }
+        
+        // Set user data
+        setUserRole(finalUserRole);
+        setUserName(user.name || '');
+        setUserId(finalUserId);
+        setCompanyId(finalCompanyId || ''); // Allow empty companyId for now
+        if (user.companyName) {
+          setCompanyName(user.companyName);
+        }
+        
+        console.log('🔧 Dashboard: Initialization complete', {
+          userRole: finalUserRole,
+          userName: user.name,
+          userId: finalUserId,
+          companyId: finalCompanyId
+        });
+        
+        setIsInitializing(false);
+      } catch (err) {
+        console.error('🔧 Dashboard: Initialization error:', err);
+        router.replace('/login');
+      }
+    };
+
+    // Add a small delay to ensure auth context is fully available
+    const timer = setTimeout(initializeDashboard, 100);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, authLoading, user, router]);
 
   // Simplified functions to avoid Hermes issues
   const handleSidebarToggle = () => {
@@ -42,6 +113,11 @@ export default function Dashboard({
   };
 
   const handleSectionChange = (section: string) => {
+    console.log('🎯 Dashboard: handleSectionChange called with section:', section);
+    console.log('🎯 Dashboard: Current section before change:', activeSection);
+    console.log('🎯 Dashboard: About to navigate to:', section);
+    
+    // Use navigateToSection to properly update navigation history
     setActiveSection(section);
     setShowSidebar(false);
   };
@@ -53,12 +129,24 @@ export default function Dashboard({
     }, 1000);
   };
 
-  // Handle case when user is not available
-  if (!user) {
+  // Show loading state while initializing
+  if (authLoading || isInitializing) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <ActivityIndicator size="large" color="#1c69ff" />
+          <Text style={styles.loadingText}>Loading dashboard...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Handle case when user is not available after loading
+  if (!user || !isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Redirecting to login...</Text>
         </View>
       </SafeAreaView>
     );
@@ -114,8 +202,8 @@ export default function Dashboard({
   };
 
   const renderSectionContent = () => {
-    // Role-based access control
-    const userRole = user?.role;
+    // Role-based access control using local state
+    const currentUserRole = userRole || user?.role;
     
     switch (activeSection) {
       case 'notifications':
@@ -127,7 +215,7 @@ export default function Dashboard({
       case 'users':
       case 'viewUsers':
         // Only ADMIN, DIRECTOR, and DEVELOPER can access user management
-        if (userRole === 'ADMIN' || userRole === 'DIRECTOR' || userRole === 'DEVELOPER') {
+        if (currentUserRole === 'ADMIN' || currentUserRole === 'DIRECTOR' || currentUserRole === 'DEVELOPER') {
           return <UserSection />;
         } else {
           return (
@@ -143,7 +231,7 @@ export default function Dashboard({
         }
       case 'viewAdmins':
         // Only DIRECTOR and DEVELOPER can access admin management
-        if (userRole === 'DIRECTOR' || userRole === 'DEVELOPER') {
+        if (currentUserRole === 'DIRECTOR' || currentUserRole === 'DEVELOPER') {
           return <AdminSection />;
         } else {
           return (
@@ -159,7 +247,7 @@ export default function Dashboard({
         }
       case 'viewDirectors':
         // Only DEVELOPER can access director management
-        if (userRole === 'DEVELOPER') {
+        if (currentUserRole === 'DEVELOPER') {
           return <DirectorsSection />;
         } else {
           return (
@@ -175,7 +263,7 @@ export default function Dashboard({
         }
       case 'addCompany':
         // Only DEVELOPER can add companies
-        if (userRole === 'DEVELOPER') {
+        if (currentUserRole === 'DEVELOPER') {
           return (
             <View style={styles.dashboardSections}>
               <View style={styles.sectionCard}>
@@ -200,7 +288,7 @@ export default function Dashboard({
         }
       case 'viewCompany':
         // Only DEVELOPER can view all companies
-        if (userRole === 'DEVELOPER') {
+        if (currentUserRole === 'DEVELOPER') {
           return (
             <View style={styles.dashboardSections}>
               <View style={styles.sectionCard}>
@@ -225,7 +313,7 @@ export default function Dashboard({
         }
       case 'addAdmin':
         // Only DEVELOPER can add admins
-        if (userRole === 'DEVELOPER') {
+        if (currentUserRole === 'DEVELOPER') {
           return (
             <View style={styles.dashboardSections}>
               <View style={styles.sectionCard}>
@@ -252,10 +340,36 @@ export default function Dashboard({
         return <AccountSection />;
       default:
         // Show Default Dashboard Content
+        console.log('🔧 Dashboard: Rendering DashboardStats with props:', {
+          userRole,
+          userId,
+          companyId,
+          userName,
+          companyName
+        });
+        
+        // Only render DashboardStats if we have the required user data
+        if (!userRole || !userId) {
+          return (
+            <View style={styles.dashboardSections}>
+              <View style={styles.sectionCard}>
+                <Text style={styles.sectionTitle}>Loading Dashboard...</Text>
+                <Text style={styles.sectionDescription}>
+                  Please wait while we load your dashboard data.
+                </Text>
+              </View>
+            </View>
+          );
+        }
+        
         return (
           <>
             {/* Dashboard Stats Cards */}
-            <DashboardStats />
+            <DashboardStats 
+              userRole={userRole}
+              userId={userId}
+              companyId={companyId}
+            />
           </>
         );
     }
@@ -315,6 +429,9 @@ export default function Dashboard({
         onClose={() => setShowSidebar(false)}
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
+        userRole={userRole}
+        companyName={companyName}
+        userName={userName}
       />
 
       {/* Breadcrumb Navigation */}

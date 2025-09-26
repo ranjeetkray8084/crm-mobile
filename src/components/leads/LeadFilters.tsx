@@ -191,17 +191,26 @@ const LeadFilters: React.FC<LeadFiltersProps> = ({
           </View>
         </FilterSection>
 
-        {/* Created By Filter */}
-        {userRole === 'DIRECTOR' && (
+        {/* Created By Filter (visible for Admin/Director, hidden for User) */}
+        {(userRole === 'ADMIN' || userRole === 'DIRECTOR') && (
           <FilterSection title="Created By" section="createdBy">
             <View style={styles.chipContainer}>
+              {/* All Created By */}
+              <FilterChip
+                label="All Created By"
+                value=""
+                isSelected={!filters.createdBy}
+                onPress={() => onFilterChange('createdBy', '')}
+              />
               <FilterChip
                 label="Me"
                 value={userId || ''}
-                isSelected={filters.createdBy === userId}
-                onPress={() => onFilterChange('createdBy', filters.createdBy === userId ? '' : (userId || ''))}
+                isSelected={filters.createdBy === (userId || '')}
+                onPress={() => onFilterChange('createdBy', filters.createdBy === (userId || '') ? '' : (userId || ''))}
               />
-              {availableUsers.map(user => (
+              {availableUsers
+                .filter(u => ((u.id || u.userId)?.toString() || '') !== (userId || ''))
+                .map(user => (
                 <FilterChip
                   key={user.id || user.userId}
                   label={user.name || user.username || `User ${user.id || user.userId}`}

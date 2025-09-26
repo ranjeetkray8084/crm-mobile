@@ -197,13 +197,29 @@ export class DashboardService {
   static async getPropertiesOverview(companyId) {
     try {
       const apiUrl = API_ENDPOINTS.PROPERTIES.COUNT_PROPERTY_OVERVIEW(companyId);
+      console.log('🏢 DashboardService: Calling property overview API:', apiUrl);
+      console.log('🏢 DashboardService: Full URL will be:', axios.defaults.baseURL + apiUrl);
+      
       const response = await axios.get(apiUrl);
+      console.log('🏢 DashboardService: Property overview API response:', response?.data);
+      console.log('🏢 DashboardService: Response status:', response?.status);
+      
       return {
         success: true,
         data: response?.data,
         message: response?.data?.message || 'Operation successful'
       };
     } catch (error) {
+      console.error('🏢 DashboardService: Property overview API error:', error);
+      console.error('🏢 DashboardService: Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        baseURL: error.config?.baseURL
+      });
+      
       // Return fallback data instead of throwing error
       return {
         success: true,
@@ -214,7 +230,7 @@ export class DashboardService {
           "sold out": 0,
           "rent out": 0
         },
-        message: 'Using fallback data'
+        message: 'Using fallback data due to API error'
       };
     }
   }

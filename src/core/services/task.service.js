@@ -243,6 +243,16 @@ export class TaskService {
   // ✅ Upload Excel file
   static async uploadExcelFile(taskData) {
     try {
+      console.log('TaskService: Starting upload with data:', {
+        title: taskData.title,
+        purpose: taskData.purpose,
+        fileName: taskData.file?.name,
+        fileSize: taskData.file?.size,
+        fileUri: taskData.file?.uri,
+        companyId: taskData.companyId,
+        uploadedBy: taskData.uploadedBy
+      });
+
       if (!taskData.file) {
         return { success: false, error: 'No file provided' };
       }
@@ -256,10 +266,21 @@ export class TaskService {
       }
 
       const formData = new FormData();
-      formData.append('file', taskData.file);
+      
+      // Format file for React Native - expo-document-picker format
+      const fileData = {
+        uri: taskData.file.uri,
+        type: taskData.file.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        name: taskData.file.name
+      };
+      
+      formData.append('file', fileData);
       formData.append('title', taskData.title);
+      formData.append('purpose', taskData.purpose);
       formData.append('companyId', taskData.companyId.toString());
       formData.append('uploadedBy', taskData.uploadedBy.toString());
+
+      console.log('TaskService: Sending request to:', API_ENDPOINTS.TASKS.UPLOAD);
 
       const response = await axios.post(API_ENDPOINTS.TASKS.UPLOAD, formData, {
         headers: { 
@@ -268,8 +289,11 @@ export class TaskService {
         timeout: 30000 // 30 second timeout for file uploads
       });
 
+      console.log('TaskService: Upload successful:', response.data);
       return { success: true, data: response.data };
     } catch (error) {
+      console.error('TaskService: Upload error:', error);
+      
       if (error.response) {
         // Server responded with error status
         const errorMessage = error.response.data?.message || 

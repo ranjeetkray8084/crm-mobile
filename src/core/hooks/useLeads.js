@@ -518,6 +518,23 @@ export const useLeads = (companyId, userId, userRole) => {
     }
   }, [getUserInfo]);
 
+  const setReminder = useCallback(async (leadId, reminderDate) => {
+    const userInfo = await getUserInfo();
+    
+    if (!userInfo || !userInfo.companyId) {
+      throw new Error('Company ID is missing or user not authenticated.');
+    }
+
+    try {
+      const result = await LeadService.setReminderForLead(userInfo.companyId, leadId, reminderDate);
+      return result;
+    } catch (err) {
+      const errorMsg = `Failed to set reminder: ${err.response?.data?.message || err.message}`;
+      setError(errorMsg);
+      throw new Error(errorMsg);
+    }
+  }, [getUserInfo]);
+
   // Load leads on mount
   useEffect(() => {
     loadLeads();
@@ -541,5 +558,6 @@ export const useLeads = (companyId, userId, userRole) => {
     getRemarks,
     addFollowUp,
     getFollowUps,
+    setReminder,
   };
 };

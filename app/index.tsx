@@ -6,7 +6,7 @@ import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
 
 export default function Index() {
   const router = useRouter();
-  const { isAuthenticated, loading, isReady: authReady } = useAuth();
+  const { isAuthenticated, loading, isReady: authReady, user } = useAuth();
   const [hasNavigated, setHasNavigated] = useState(false);
   const [isReady, setIsReady] = useState(false);
 
@@ -24,8 +24,14 @@ export default function Index() {
 
     if (!loading) {
       try {
-        if (isAuthenticated) {
+        if (isAuthenticated && user) {
           console.log('Index: User authenticated, navigating to tabs');
+          console.log('Index: User data:', { 
+            role: user.role, 
+            name: user.name, 
+            userId: user.userId || user.id,
+            companyId: user.companyId 
+          });
           setHasNavigated(true);
           router.replace('/(tabs)');
         } else {
@@ -40,13 +46,13 @@ export default function Index() {
         router.replace('/login');
       }
     }
-  }, [isAuthenticated, loading, router, hasNavigated, isReady, authReady]);
+  }, [isAuthenticated, loading, user, router, hasNavigated, isReady, authReady]);
 
   if (loading || !isReady || !authReady) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#1c69ff" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={styles.loadingText}>Initializing app...</Text>
       </View>
     );
   }

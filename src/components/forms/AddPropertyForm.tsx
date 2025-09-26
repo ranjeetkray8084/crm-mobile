@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert 
 import { Ionicons } from '@expo/vector-icons';
 import { useProperties } from '../../core/hooks/useProperties';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthService } from '../../core/services/auth.service';
 
 interface AddPropertyFormProps {
   onSuccess: () => void;
@@ -56,9 +57,32 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({
       }
 
       try {
-        const userData = await AsyncStorage.getItem('crm_user');
-        if (userData) {
-          const user = JSON.parse(userData);
+        // Prefer new keys first
+        let userRaw = await AsyncStorage.getItem('user');
+
+        // Backward compat: migrate old key if present
+        if (!userRaw) {
+          const oldUserRaw = await AsyncStorage.getItem('crm_user');
+          if (oldUserRaw) {
+            await AsyncStorage.setItem('user', oldUserRaw);
+            await AsyncStorage.removeItem('crm_user');
+            userRaw = oldUserRaw;
+          }
+        }
+
+        if (!userRaw) {
+          // Fallback to AuthService if available
+          try {
+            const currentUser = await AuthService.getCurrentUser?.();
+            if (currentUser) {
+              userRaw = JSON.stringify(currentUser);
+              await AsyncStorage.setItem('user', userRaw);
+            }
+          } catch {}
+        }
+
+        if (userRaw) {
+          const user = JSON.parse(userRaw);
           setCompanyId(user.companyId?.toString() || '');
           setUserId(user.userId?.toString() || user.id?.toString() || '');
         }
@@ -338,6 +362,14 @@ const AddPropertyForm: React.FC<AddPropertyFormProps> = ({
               >
                 <Text style={[styles.statusOptionText, form.status === 'SOLD_OUT' && styles.statusOptionTextSelected]}>
                   Sold Out
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.statusOption, form.status === 'DROPPED' && styles.statusOptionSelected]}
+                onPress={() => handleChange('status', 'DROPPED')}
+              >
+                <Text style={[styles.statusOptionText, form.status === 'DROPPED' && styles.statusOptionTextSelected]}>
+                  Dropped
                 </Text>
               </TouchableOpacity>
             </View>

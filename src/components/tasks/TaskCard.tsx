@@ -8,6 +8,7 @@ import TaskPreviewModal from './TaskPreviewModal';
 interface Task {
   id: string;
   title: string;
+  purpose?: string;
   status: string;
   uploadDate: string;
   uploadedByName?: string;
@@ -165,6 +166,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
           <Text style={styles.title} numberOfLines={2}>
             {task.title}
           </Text>
+          {task.purpose && (
+            <Text style={styles.purpose} numberOfLines={1}>
+              {task.purpose}
+            </Text>
+          )}
           <View style={styles.dateContainer}>
             <Ionicons name="calendar-outline" size={14} color="#6b7280" />
             <Text style={styles.dateText}>
@@ -315,6 +321,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1e293b',
     marginBottom: 4,
+  },
+  purpose: {
+    fontSize: 14,
+    color: '#6b7280',
+    marginBottom: 4,
+    fontStyle: 'italic',
   },
   dateContainer: {
     flexDirection: 'row',

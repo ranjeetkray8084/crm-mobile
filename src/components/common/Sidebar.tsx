@@ -20,13 +20,19 @@ interface SidebarProps {
   onClose: () => void;
   activeSection: string;
   onSectionChange: (section: string) => void;
+  userRole?: string;
+  companyName?: string;
+  userName?: string;
 }
 
 export default function Sidebar({ 
   isVisible, 
   onClose, 
   activeSection, 
-  onSectionChange 
+  onSectionChange,
+  userRole,
+  companyName,
+  userName
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -80,38 +86,34 @@ export default function Sidebar({
 
     const roleSpecificItems = {
       ADMIN: [
-        { id: 'users', label: 'Users Management', icon: 'people-outline' },
-        { id: 'account', label: 'Account Settings', icon: 'person-outline' },
+        { id: 'viewUsers', label: 'Users', icon: 'people-outline' },
+        { id: 'account', label: 'Account', icon: 'person-outline' },
       ],
       USER: [
-        { id: 'account', label: 'Account Settings', icon: 'person-outline' },
+        { id: 'account', label: 'Account', icon: 'person-outline' },
       ],
       DEVELOPER: [
+        { id: 'addCompany', label: 'Add Company', icon: 'add-outline' },
         { id: 'viewCompany', label: 'View Company', icon: 'eye-outline' },
-        { id: 'viewAdmins', label: 'View Admin', icon: 'people-outline' },
-        { id: 'viewDirectors', label: 'View Directors', icon: 'people-outline' },
-        { id: 'viewUsers', label: 'View Users', icon: 'people-outline' },
-        { id: 'account', label: 'Account Settings', icon: 'person-outline' },
+        { id: 'addAdmin', label: 'Add Admin / Users', icon: 'add-outline' },
+        { id: 'viewAdmins', label: 'View Admin', icon: 'eye-outline' },
+        { id: 'viewDirectors', label: 'View Directors', icon: 'eye-outline' },
+        { id: 'viewUsers', label: 'View Users', icon: 'eye-outline' },
+        { id: 'account', label: 'Account', icon: 'person-outline' },
       ],
       DIRECTOR: [
         { id: 'viewAdmins', label: 'Admins', icon: 'people-outline' },
         { id: 'viewUsers', label: 'Users', icon: 'people-outline' },
-        { id: 'account', label: 'Account Settings', icon: 'person-outline' },
+        { id: 'account', label: 'Account', icon: 'person-outline' },
       ],
     };
 
-    const userRole = (user?.role || 'USER') as keyof typeof roleSpecificItems;
-    return [...commonItems, ...(roleSpecificItems[userRole] || roleSpecificItems.USER)];
+    const currentUserRole = (userRole || user?.role || 'USER') as keyof typeof roleSpecificItems;
+    return [...commonItems, ...(roleSpecificItems[currentUserRole] || roleSpecificItems.USER)];
   };
 
   const handleSectionChange = (section: string) => {
     console.log('🔔 DEBUG: Sidebar: handleSectionChange called with section:', section);
-    
-    if (section === 'logout') {
-      console.log('🔔 DEBUG: Sidebar: Handling logout...');
-      handleLogout();
-      return;
-    }
 
     // Navigate for specific actions that need separate screens
     if (section === 'viewCompany') {

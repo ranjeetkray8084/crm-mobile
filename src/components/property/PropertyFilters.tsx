@@ -40,7 +40,8 @@ const PropertyFilters: React.FC<PropertyFiltersProps> = ({
     { value: 'AVAILABLE_FOR_SALE', label: 'For Sale' },
     { value: 'AVAILABLE_FOR_RENT', label: 'For Rent' },
     { value: 'RENT_OUT', label: 'Rented Out' },
-    { value: 'SOLD_OUT', label: 'Sold Out' }
+    { value: 'SOLD_OUT', label: 'Sold Out' },
+    { value: 'DROPPED', label: 'Dropped' }
   ];
 
   const typeOptions = [

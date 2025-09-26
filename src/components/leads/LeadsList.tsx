@@ -8,6 +8,7 @@ interface LeadsListProps {
   leads: Lead[];
   searchTerm: string;
   onStatusUpdate: (leadId: string, status: string) => void;
+  onShowSaleRentModal?: (lead: Lead, pendingStatusChange: string) => void;
   onDelete: (leadId: string) => void;
   onAssign: (leadId: string) => void;
   onUnassign: (leadId: string) => void;

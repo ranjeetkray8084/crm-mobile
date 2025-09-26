@@ -5,6 +5,8 @@ import { useAuth } from '../../src/shared/contexts/AuthContext';
 import { useTasks } from '../../src/core/hooks/useTasks';
 import TaskCard from '../../src/components/tasks/TaskCard';
 import TaskUploadForm from '../../src/components/tasks/TaskUploadForm';
+import FilterModal from '../../src/components/tasks/FilterModal';
+import TaskToolbar from '../../src/components/tasks/TaskToolbar';
 import TabScreenWrapper from '../../src/components/common/TabScreenWrapper';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as FileSystem from 'expo-file-system';
@@ -15,6 +17,7 @@ export default function TasksScreen() {
   const router = useRouter();
   const [showUploadForm, setShowUploadForm] = useState(true); // Default to true to show form
   const [refreshing, setRefreshing] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
 
   const companyId = user?.companyId;
   const userId = user?.userId || user?.id;
@@ -48,7 +51,16 @@ export default function TasksScreen() {
     canManageTask,
     isTaskAssignedToUser,
     refreshTasks,
-    clearError
+    clearError,
+    // Filters
+    searchTerm,
+    setSearchTerm,
+    taskStatus,
+    setTaskStatus,
+    createdByFilter,
+    setCreatedByFilter,
+    assignedToFilter,
+    setAssignedToFilter
   } = useTasks(companyId, userId, role);
 
   useEffect(() => {
@@ -252,6 +264,46 @@ export default function TasksScreen() {
     }
   };
 
+  const clearFilters = () => {
+    setSearchTerm('');
+    setTaskStatus('ALL');
+    setCreatedByFilter('ALL');
+    setAssignedToFilter('ALL');
+  };
+
+  // Get available creators and assignees for filter dropdowns
+  const availableCreators = React.useMemo(() => {
+    const creators = new Map();
+    tasks.forEach(task => {
+      const creator = task.uploadedBy;
+      if (creator && (creator.userId || creator.id)) {
+        const userId = creator.userId || creator.id;
+        creators.set(userId, {
+          id: userId,
+          name: creator.name || creator.username || 'Unknown',
+          username: creator.username || creator.name || 'Unknown'
+        });
+      }
+    });
+    return Array.from(creators.values());
+  }, [tasks]);
+
+  const availableAssignees = React.useMemo(() => {
+    const assignees = new Map();
+    tasks.forEach(task => {
+      const assignee = task.assignedTo;
+      if (assignee && (assignee.userId || assignee.id)) {
+        const userId = assignee.userId || assignee.id;
+        assignees.set(userId, {
+          id: userId,
+          name: assignee.name || assignee.username || 'Unknown',
+          username: assignee.username || assignee.name || 'Unknown'
+        });
+      }
+    });
+    return Array.from(assignees.values());
+  }, [tasks]);
+
   if (!companyId || !userId) {
     return (
       <View style={styles.container}>
@@ -269,31 +321,21 @@ export default function TasksScreen() {
   return (
     <TabScreenWrapper>
       <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerContent}>
-            <View style={styles.titleContainer}>
-              <Ionicons name="list-outline" size={28} color="#1c69ff" />
-              <Text style={styles.title}>Task Management</Text>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowUploadForm(!showUploadForm)}
-            >
-              <Ionicons 
-                name={showUploadForm ? "close" : "add"} 
-                size={24} 
-                color="#fff" 
-              />
-            </TouchableOpacity>
-          </View>
-        
+        {/* Toolbar */}
+        <TaskToolbar
+          searchTerm={searchTerm || ''}
+          onSearchChange={setSearchTerm}
+          onToggleFilters={() => setShowFilterModal(true)}
+          tasksCount={filteredTasks.length}
+          showFilters={showFilterModal}
+        />
+
+        {/* Stats Section */}
         {!showUploadForm && (
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>{filteredTasks.length}</Text>
-              <Text style={styles.statLabel}>Total Tasks</Text>
+              <Text style={styles.statLabel}>Total</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statNumber}>
@@ -315,17 +357,16 @@ export default function TasksScreen() {
             </View>
           </View>
         )}
-      </View>
 
-      {/* Download Info */}
-      {!showUploadForm && (
-        <View style={styles.infoContainer}>
-          <Ionicons name="information-circle" size={20} color="#3b82f6" />
-          <Text style={styles.infoText}>
-            📱 Files are downloaded to your PHONE, not your computer. Use the share button to save to Downloads or share via other apps.
-          </Text>
-        </View>
-      )}
+        {/* Download Info */}
+        {!showUploadForm && (
+          <View style={styles.infoContainer}>
+            <Ionicons name="information-circle" size={20} color="#3b82f6" />
+            <Text style={styles.infoText}>
+              📱 Files are downloaded to your PHONE, not your computer. Use the share button to save to Downloads or share via other apps.
+            </Text>
+          </View>
+        )}
 
       {/* Upload Form */}
       {showUploadForm && (
@@ -395,6 +436,22 @@ export default function TasksScreen() {
           <Ionicons name="add" size={24} color="#fff" />
         </TouchableOpacity>
       )}
+
+      {/* Filter Modal */}
+      <FilterModal
+        visible={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        taskStatus={taskStatus}
+        setTaskStatus={setTaskStatus}
+        createdByFilter={createdByFilter}
+        setCreatedByFilter={setCreatedByFilter}
+        assignedToFilter={assignedToFilter}
+        setAssignedToFilter={setAssignedToFilter}
+        availableCreators={availableCreators}
+        availableAssignees={availableAssignees}
+        onClearFilters={clearFilters}
+      />
+
       </View>
     </TabScreenWrapper>
   );
@@ -404,22 +461,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-    alignItems: 'stretch',
-  },
-  header: {
-    backgroundColor: '#fff',
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
 
   infoContainer: {
@@ -428,7 +471,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    marginHorizontal: 20,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -439,16 +481,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1e40af',
     lineHeight: 18,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e293b',
   },
   addButton: {
     backgroundColor: '#1c69ff',
@@ -469,19 +501,27 @@ const styles = StyleSheet.create({
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    backgroundColor: '#f8fafc',
+    marginVertical: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   statItem: {
     alignItems: 'center',
+    flex: 1,
   },
   statNumber: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#1c69ff',
+    color: '#1e293b',
   },
   statLabel: {
     fontSize: 12,
     color: '#6b7280',
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '500',
   },
   uploadContainer: {
     backgroundColor: '#fff',
@@ -498,7 +538,6 @@ const styles = StyleSheet.create({
   },
   tasksContainer: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   loadingContainer: {
     alignItems: 'center',

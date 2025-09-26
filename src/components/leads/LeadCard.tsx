@@ -9,6 +9,7 @@ import { Lead } from '../../types/lead';
 interface LeadCardProps {
   lead: Lead;
   onStatusUpdate: (leadId: string, status: string) => void;
+  onShowSaleRentModal?: (lead: Lead, pendingStatusChange: string) => void;
   onAssign: (leadId: string) => void;
   onUnassign: (leadId: string) => void;
   onUpdate: (lead: Lead) => void;
@@ -22,6 +23,7 @@ interface LeadCardProps {
 const LeadCard: React.FC<LeadCardProps> = ({
   lead,
   onStatusUpdate,
+  onShowSaleRentModal,
   onAssign,
   onUnassign,
   onUpdate,
@@ -153,7 +155,17 @@ const LeadCard: React.FC<LeadCardProps> = ({
   };
 
   const handleStatusChange = (newStatus: string) => {
-    onStatusUpdate(leadId, newStatus);
+    // If changing to CLOSED, show Sale/Rent selection modal first
+    if (newStatus === 'CLOSED') {
+      if (onShowSaleRentModal) {
+        onShowSaleRentModal(lead, newStatus);
+      } else {
+        // Fallback to direct status update if modal handler not provided
+        onStatusUpdate(leadId, newStatus);
+      }
+    } else {
+      onStatusUpdate(leadId, newStatus);
+    }
   };
 
   const actions = [

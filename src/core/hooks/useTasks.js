@@ -8,6 +8,9 @@ export const useTasks = (companyId, userId, role) => {
   const [error, setError] = useState(null);
   const [createdByFilter, setCreatedByFilter] = useState('ALL');
   const [assignedToFilter, setAssignedToFilter] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [taskStatus, setTaskStatus] = useState('ALL'); // ALL | NEW | UNDER_PROCESS | COMPLETED
+  
 
   // --- Role-based Tasks Loader ---
   const loadTasksByRole = useCallback(async () => {
@@ -69,9 +72,28 @@ export const useTasks = (companyId, userId, role) => {
     });
   }, []);
 
-  // Get filtered tasks based on createdByFilter and assignedToFilter
+  // Get filtered tasks based on all filters
   const getFilteredTasks = useCallback(() => {
     let filteredTasks = [...tasks];
+
+    // Search filter
+    if (searchTerm && searchTerm.trim() !== '') {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filteredTasks = filteredTasks.filter(task => {
+        const title = task.title?.toLowerCase() || '';
+        const creatorName = task.uploadedBy?.name?.toLowerCase() || task.uploadedBy?.username?.toLowerCase() || '';
+        const assigneeName = task.assignedTo?.name?.toLowerCase() || task.assignedTo?.username?.toLowerCase() || '';
+        
+        return title.includes(searchLower) || 
+               creatorName.includes(searchLower) || 
+               assigneeName.includes(searchLower);
+      });
+    }
+
+    // Status filter
+    if (taskStatus && taskStatus !== 'ALL') {
+      filteredTasks = filteredTasks.filter(task => task.status === taskStatus);
+    }
 
     // Created By filter
     if (createdByFilter === 'CURRENT_USER') {
@@ -102,7 +124,10 @@ export const useTasks = (companyId, userId, role) => {
     }
 
     return filteredTasks;
-  }, [tasks, createdByFilter, assignedToFilter, userId]);
+  }, [tasks, searchTerm, taskStatus, createdByFilter, assignedToFilter, userId]);
+
+  // Get filtered tasks for display
+  const filteredTasks = getFilteredTasks();
 
   // --- Task Operations ---
   const loadAssignedTasks = useCallback(async () => {
@@ -437,9 +462,6 @@ export const useTasks = (companyId, userId, role) => {
     setError(null);
   }, []);
 
-  // Get filtered tasks for display
-  const filteredTasks = getFilteredTasks();
-
   return {
     tasks,
     filteredTasks,
@@ -468,6 +490,11 @@ export const useTasks = (companyId, userId, role) => {
     undoLastAction,
     canManageTask,
     isTaskAssignedToUser,
-    clearError
+    clearError,
+    // Filters
+    searchTerm,
+    setSearchTerm,
+    taskStatus,
+    setTaskStatus
   };
 };

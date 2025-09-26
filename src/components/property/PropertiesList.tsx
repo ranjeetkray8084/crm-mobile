@@ -40,6 +40,7 @@ interface PropertiesListProps {
   onUpdate?: (property: Property) => void;
   onAddRemark?: (property: Property) => void;
   onViewRemarks?: (property: Property) => void;
+  onSetReminder?: (propertyId: number, reminderDate: string) => void;
   onOutOfBox?: (property: Property) => void;
   companyId?: number;
   // Add pagination props
@@ -61,6 +62,7 @@ const PropertiesList: React.FC<PropertiesListProps> = ({
   onUpdate,
   onAddRemark,
   onViewRemarks,
+  onSetReminder,
   onOutOfBox,
   companyId,
   currentPage = 0,
@@ -74,6 +76,7 @@ const PropertiesList: React.FC<PropertiesListProps> = ({
       onUpdate={onUpdate}
       onAddRemark={onAddRemark}
       onViewRemarks={onViewRemarks}
+      onSetReminder={onSetReminder}
       onOutOfBox={onOutOfBox}
       companyId={companyId}
     />

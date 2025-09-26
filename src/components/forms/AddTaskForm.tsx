@@ -12,11 +12,13 @@ interface AddTaskFormProps {
 
 interface TaskData {
   title: string;
+  purpose: string;
   file: any;
 }
 
 const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
   const [title, setTitle] = useState('');
+  const [purpose, setPurpose] = useState('');
   const [file, setFile] = useState<any>(null);
   const [error, setError] = useState('');
   const [uploadLoading, setUploadLoading] = useState(false);
@@ -54,12 +56,19 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'],
         copyToCacheDirectory: true,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const selectedFile = result.assets[0];
+        
+        console.log('AddTaskForm: Selected file:', {
+          name: selectedFile.name,
+          size: selectedFile.size,
+          mimeType: selectedFile.mimeType,
+          uri: selectedFile.uri
+        });
         
         // Validate file type
         if (!selectedFile.name.endsWith('.xlsx') && !selectedFile.name.endsWith('.xls')) {
@@ -73,7 +82,22 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
           return;
         }
 
-        setFile(selectedFile);
+        // Ensure proper MIME type for React Native
+        const fileWithMimeType = {
+          ...selectedFile,
+          mimeType: selectedFile.mimeType || (selectedFile.name.endsWith('.xlsx') 
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'application/vnd.ms-excel')
+        };
+
+        // Auto-populate title with filename (without extension) - ONLY after validation passes
+        const fileNameWithoutExt = selectedFile.name.replace(/\.[^/.]+$/, "");
+        if (!title.trim()) {
+          setTitle(fileNameWithoutExt);
+          console.log('AddTaskForm: Auto-populated title from filename:', fileNameWithoutExt);
+        }
+
+        setFile(fileWithMimeType);
         setError('');
       }
     } catch (err) {
@@ -85,11 +109,19 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
   const removeFile = () => {
     setFile(null);
     setError('');
+    // Clear title and purpose when file is removed
+    setTitle('');
+    setPurpose('');
   };
 
   const handleSubmit = async () => {
     if (!title.trim()) {
       setError('❌ Task title is required');
+      return;
+    }
+
+    if (!purpose.trim()) {
+      setError('❌ Task purpose is required');
       return;
     }
 
@@ -110,6 +142,7 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
 
     const taskData = {
       title: title.trim(),
+      purpose: purpose.trim(),
       file
     };
 
@@ -119,6 +152,7 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
       
       if (result?.success) {
         setTitle('');
+        setPurpose('');
         setFile(null);
         setError('');
         Alert.alert('Success', 'Task uploaded successfully!');
@@ -164,6 +198,19 @@ const AddTaskForm: React.FC<AddTaskFormProps> = ({ onSuccess, onCancel }) => {
             value={title}
             onChangeText={setTitle}
             placeholder="Enter task title"
+          />
+        </View>
+
+        {/* Purpose Field */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Purpose *</Text>
+          <TextInput
+            style={styles.multilineInput}
+            value={purpose}
+            onChangeText={setPurpose}
+            placeholder="Enter task purpose"
+            multiline
+            numberOfLines={3}
           />
         </View>
 
@@ -274,6 +321,16 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: 'white',
+  },
+  multilineInput: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: 'white',
+    textAlignVertical: 'top',
+    minHeight: 80,
   },
   filePickerButton: {
     borderWidth: 2,

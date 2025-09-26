@@ -15,6 +15,10 @@
     "build:android-preview": "eas build --platform android --profile preview",
     "build:ios": "eas build --platform ios --profile production",
     "build:ios-preview": "eas build --platform ios --profile preview",
+    "build:ios-local": "eas build --platform ios --profile production --local",
+    "build:ios-simulator": "eas build --platform ios --profile development --simulator",
+    "build:ios-free": "eas build --platform ios --profile development",
+    "build:ios-dev": "eas build --platform ios --profile development --local",
     "build:production": "node build-production.js",
     "install-device-info": "node install-device-info.js",
     "test-setup": "node test-multi-device-setup.js"
